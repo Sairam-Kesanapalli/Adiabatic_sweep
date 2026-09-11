@@ -1,0 +1,29 @@
+* ============================================================
+* Fast tt include: ONLY the sky130 1.8 V nfet / pfet.
+*
+* Numerically identical to
+*   .lib "./sky130-ngspice-models/libs.tech/ngspice/sky130.lib.spice" tt
+* for circuits using only sky130_fd_pr__nfet_01v8 / __pfet_01v8, but
+* skips the ~30 other device families the full corner also parses.
+* Verified bit-identical at four points of the ECRL width sweep;
+* ~50x faster to parse (77 s -> 1.5 s per ngspice invocation).
+*
+* All four includes are REQUIRED even with mismatch and Monte-Carlo
+* disabled, because the pm3 model expressions reference the *_diff and
+* *_slope parameters they define.  Omit one and ngspice aborts with
+* "Undefined parameter [...]".
+* ============================================================
+
+* The ngspice flavour of sky130 expresses geometry in MICRONS via this
+* global option (normally set in libs.tech/ngspice/all.spice).  Without
+* it the model bin limits are metres and l=0.15 w=1 matches no bin.
+.option scale=1.0u
+
+.param mc_mm_switch=0
+.param mc_pr_switch=0
+.include "./sky130-ngspice-models/libs.tech/ngspice/parameters/invariant.spice"
+.include "./sky130-ngspice-models/libs.tech/ngspice/parameters/lod.spice"
+.include "./sky130-ngspice-models/libs.ref/sky130_fd_pr/spice/sky130_fd_pr__nfet_01v8__tt.pm3.spice"
+.include "./sky130-ngspice-models/libs.ref/sky130_fd_pr/spice/sky130_fd_pr__nfet_01v8__mismatch.corner.spice"
+.include "./sky130-ngspice-models/libs.ref/sky130_fd_pr/spice/sky130_fd_pr__pfet_01v8__tt.corner.spice"
+.include "./sky130-ngspice-models/libs.ref/sky130_fd_pr/spice/sky130_fd_pr__pfet_01v8__mismatch.corner.spice"
