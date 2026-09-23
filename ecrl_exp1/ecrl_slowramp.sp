@@ -90,4 +90,10 @@ CLOAD_OUTB OUTB 0 {CL}
 .meas tran OUT_B  FIND V(OUT)  AT={18.5*TPHASE}
 .meas tran OUTB_B FIND V(OUTB) AT={18.5*TPHASE}
 
+* -------- run check -----------------------------------------
+* PHI starts rising at TPHASE and takes TPHASE to reach VDD, so it
+* crosses VDD/2 at exactly 1.5*TPHASE.  run_ecrl_slowramp_sweep.sh
+* reads this back to prove the simulator used the requested TPHASE.
+.meas tran chk_tphase WHEN V(PHI)='VDD/2' RISE=1
+
 .end

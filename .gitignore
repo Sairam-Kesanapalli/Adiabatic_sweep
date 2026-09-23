@@ -1,0 +1,7 @@
+# PDK symlinks -> ~/.volare/sky130A (machine-specific, recreate with ln -s)
+sky130-ngspice-models
+ecrl_exp1/sky130-ngspice-models
+
+# per-point decks and logs kept by the sweep scripts
+runs_2lal/
+ecrl_exp1/runs_ecrl_slowramp/
