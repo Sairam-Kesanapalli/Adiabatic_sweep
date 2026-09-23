@@ -116,7 +116,7 @@ plot {', '.join(plots)}
 if __name__ == "__main__":
     jobs = [
         ("2lal_inverter_sweep.csv", "2lal_energy_vs_ftr",
-         "2LAL quad-rail inverter: energy per operation vs transition frequency\\nsky130 tt, VDD 1.8 V, L = 0.15 um, CL = 25 fF per node"),
+         "2LAL quad-rail inverter (8-stage ring): energy per operation vs transition frequency\\nsky130 tt, VDD 1.8 V, L = 0.15 um, CL = 25 fF per node"),
         ("ecrl_exp1/ecrl_slowramp_sweep.csv", "ecrl_slowramp_energy_vs_ftr",
          "ECRL inverter (adiabatic slow-ramp input, alternating data): energy per operation vs transition frequency\\nsky130 tt, VDD 1.8 V, L = 0.15 um, CL = 25 fF"),
     ]
@@ -131,7 +131,7 @@ if __name__ == "__main__":
         print("wrote %s.cir and %s.png" % (stem, stem))
 
     overlay([("ECRL inverter (slow-ramp input)", loaded[1][1]),
-             ("2LAL quad-rail inverter",          loaded[0][1])],
+             ("2LAL quad-rail inverter (ring)",   loaded[0][1])],
             "ecrl_vs_2lal_W1.0.png",
             "ECRL vs 2LAL inverter, matched conditions\\nW = 1.0 um, L = 0.15 um, CL = 25 fF, same TPHASE, alternating data")
     print("wrote ecrl_vs_2lal_W1.0.png")
@@ -148,7 +148,7 @@ if __name__ == "__main__":
         fc.append(d)
         print("wrote %s.cir and %s.png" % (stem2, stem2))
     overlay([("ECRL inverter (slow-ramp input)", fc[1]),
-             ("2LAL quad-rail inverter",          fc[0])],
+             ("2LAL quad-rail inverter (ring)",   fc[0])],
             "ecrl_vs_2lal_W1.0_fclock.png",
             "ECRL vs 2LAL inverter vs POWER-CLOCK frequency (the operation rate)\\nW = 1.0 um, L = 0.15 um, CL = 25 fF, alternating data",
             xlab=XL, xlo=2, xhi=330, xtics='("2.5" 2.5, "5" 5, "12.5" 12.5, "25" 25, "50" 50, "125" 125, "250" 250)')

@@ -1,4 +1,9 @@
 * ============================================================================
+* !! SUPERSEDED -- OPEN CHAIN WITH A CHAIN-END ARTIFACT !!
+* The last node of this open chain is never restored (no stage after it), so
+* the stages before it are disturbed and the metered energy is inflated, by up
+* to 47x at slow clocks.  Use 2LAL_inverter_ring.sp (make_2lal_ring.py).
+* Kept only so earlier results can be reproduced.
 * 2LAL ADIABATIC INVERTER -- sky130 / ngspice
 * ----------------------------------------------------------------------------
 * Two-Level Adiabatic Logic (M. P. Frank).  Four trapezoidal power-clock rails

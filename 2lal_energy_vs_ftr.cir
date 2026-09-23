@@ -1,5 +1,5 @@
 * ============================================================
-* 2LAL quad-rail inverter: energy per operation vs transition frequency\nsky130 tt, VDD 1.8 V, L = 0.15 um, CL = 25 fF per node
+* 2LAL quad-rail inverter (8-stage ring): energy per operation vs transition frequency\nsky130 tt, VDD 1.8 V, L = 0.15 um, CL = 25 fF per node
 *
 * X-axis : transition frequency f_tr = 1/TPHASE  (MHz)
 * Y-axis : energy per operation (fJ)
@@ -22,63 +22,63 @@ let FTR[6] = 1000
 
 * W = 0.84 um
 let E084 = vector(7)
-let E084[0] = 43.3845
-let E084[1] = 42.5262
-let E084[2] = 21.2916
-let E084[3] = 20.3969
-let E084[4] = 23.7124
-let E084[5] = 36.8065
-let E084[6] = 61.6987
+let E084[0] = 1.27363
+let E084[1] = 1.70055
+let E084[2] = 3.6135
+let E084[3] = 6.87921
+let E084[4] = 13.0087
+let E084[5] = 28.8077
+let E084[6] = 50.2988
 
 * W = 1.0 um
 let E100 = vector(7)
-let E100[0] = 44.0474
-let E100[1] = 45.1082
-let E100[2] = 23.9714
-let E100[3] = 21.6179
-let E100[4] = 23.8672
-let E100[5] = 36.8554
-let E100[6] = 64.9535
+let E100[0] = 0.931403
+let E100[1] = 1.44168
+let E100[2] = 3.26722
+let E100[3] = 6.28912
+let E100[4] = 11.9284
+let E100[5] = 26.4856
+let E100[6] = 46.0964
 
 * W = 1.2 um
 let E120 = vector(7)
-let E120[0] = 44.6536
-let E120[1] = 46.6297
-let E120[2] = 32.0504
-let E120[3] = 23.8327
-let E120[4] = 24.3848
-let E120[5] = 40.732
-let E120[6] = 70.7395
+let E120[0] = 0.670236
+let E120[1] = 1.22146
+let E120[2] = 2.93784
+let E120[3] = 5.72805
+let E120[4] = 10.9559
+let E120[5] = 24.5864
+let E120[6] = 43.0507
 
 * W = 1.5 um
 let E150 = vector(7)
-let E150[0] = 46.0404
-let E150[1] = 47.6235
-let E150[2] = 49.9153
-let E150[3] = 30.6066
-let E150[4] = 26.9465
-let E150[5] = 34.8705
-let E150[6] = 68.6294
+let E150[0] = 0.618117
+let E150[1] = 1.05815
+let E150[2] = 2.50103
+let E150[3] = 4.89029
+let E150[4] = 9.44469
+let E150[5] = 21.5891
+let E150[6] = 38.4167
 
 * W = 2.0 um
 let E200 = vector(7)
-let E200[0] = 49.2026
-let E200[1] = 50.5317
-let E200[2] = 54.1535
-let E200[3] = 54.0264
-let E200[4] = 32.7586
-let E200[5] = 38.4528
-let E200[6] = 71.1412
+let E200[0] = 0.746645
+let E200[1] = 1.06362
+let E200[2] = 2.34227
+let E200[3] = 4.53472
+let E200[4] = 8.75249
+let E200[5] = 20.06
+let E200[6] = 35.9107
 
 * W = 3.0 um
 let E300 = vector(7)
-let E300[0] = 56.086
-let E300[1] = 57.1038
-let E300[2] = 60.1604
-let E300[3] = 64.2038
-let E300[4] = 61.4678
-let E300[5] = 42.1096
-let E300[6] = 76.8371
+let E300[0] = 0.898245
+let E300[1] = 1.07729
+let E300[2] = 2.17893
+let E300[3] = 4.16725
+let E300[4] = 8.06247
+let E300[5] = 18.6991
+let E300[6] = 33.9479
 
 print FTR
 print E084
