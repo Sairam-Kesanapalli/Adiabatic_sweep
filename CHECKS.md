@@ -82,6 +82,18 @@ IN=1 -> OUT ~0 and OUTB ~1.8.  IN=0 -> the opposite.
     ./run_2lal_sweep.sh                      # ~5 min  -> 2lal_inverter_sweep.csv
     ecrl_exp1/run_ecrl_slowramp_sweep.sh     # ~3 min  -> ecrl_slowramp_sweep.csv
 
+Both stop at the first bad point (exit 1, `FAIL [W.._T..]: reason`) instead of
+leaving a hole in the CSV.  Per point they check: the sed edits landed, ngspice
+exited 0 with no error/warning lines, every energy `.meas` is a number, the
+simulator used the requested W on every FET (`show m : w`, read back from an
+operating-point run) and the requested TPHASE (`chk_tphase` = 1.5*TPHASE).
+Every deck and log is kept in `runs_2lal/` and `ecrl_exp1/runs_ecrl_slowramp/`.
+
+The PDK symlinks are not in git; recreate them once per machine:
+
+    ln -s ~/.volare/sky130A sky130-ngspice-models
+    ln -s ~/.volare/sky130A ecrl_exp1/sky130-ngspice-models
+
 Your original ECRL sweep still works and is unchanged:
 
     cd ecrl_exp1 && ./run_width_sweep.sh     # ~55 min -> width_sweep.csv
