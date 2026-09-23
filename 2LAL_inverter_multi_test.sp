@@ -238,4 +238,10 @@ Re e 0 1e15
 * TEST C: average over the alternating pattern  (8 operations)
 .meas tran E_C PARAM='(e2-e0)/8'
 
+* -------- run check -----------------------------------------------------
+* p1 starts rising at TPHASE and takes TPHASE to reach VDD, so it crosses
+* VDD/2 at exactly 1.5*TPHASE.  run_2lal_sweep.sh reads this back to prove
+* the simulator used the TPHASE the sweep asked for.
+.meas tran chk_tphase WHEN V(p1)='VDD/2' RISE=1
+
 .end
