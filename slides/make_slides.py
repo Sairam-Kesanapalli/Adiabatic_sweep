@@ -4,10 +4,11 @@ Build the faculty progress-review deck for the ECRL / 2LAL adiabatic-logic work.
 
     python3 make_slides.py            -> ECRL_2LAL_Progress_Review.pptx
 
-Figures come from slides_figs/ (regenerate them with the .gp scripts and
-mk_svg.py in that directory).  Every number quoted here traces to
-ecrl_exp1/ecrl_slowramp_sweep.csv, 2lal_inverter_sweep.csv or
-2LAL_energy_sweep.csv -- see CHECKS.md.
+Figures come from figs/ (regenerate them with the .gp scripts and
+mk_svg.py in that directory) and ../verification/figures/ (regenerate with
+../verification/verify_all.sh).  Every number quoted here traces to
+../ecrl/ecrl_slowramp_sweep.csv, ../2lal/2lal_inverter_sweep.csv or
+../2lal/superseded/2LAL_energy_sweep.csv -- see ../CHECKS.md.
 """
 import os
 from PIL import Image
@@ -20,7 +21,8 @@ from pptx.oxml.ns import qn
 from pptx.oxml import parse_xml
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-FIG  = os.path.join(HERE, "slides_figs")
+FIG  = os.path.join(HERE, "figs")
+VFIG = os.path.join(HERE, "..", "verification", "figures")   # waveform figures
 OUT  = os.path.join(HERE, "ECRL_2LAL_Progress_Review.pptx")
 
 # ------------------------------------------------------------------ design
@@ -812,6 +814,43 @@ notes(s, "In static CMOS, inverting a differential signal really is just "
          "datapath — and we measured exactly 2.000x, which is a good sign "
          "the implementation is right.")
 
+# ============================================= 18b. 2LAL functional check
+s = slide()
+head(s, "The quad-rail inverter, checked at the waveform",
+     "part ii · correctness", kcolor=LALC)
+pic(s, os.path.join(VFIG, "2lal_inverter_stage_T10.png"), M - 0.10, 1.42, 7.60, 4.05)
+_, tf = textbox(s, M, 5.58, 7.40, 1.2)
+para(tf, "One stage inside the 8-stage ring, T_phase = 10 ns. When node 3 "
+         "carries a 1 (its a sub-chain pulses), node 4 carries a 0 one T_phase "
+         "later (its n sub-chain pulses), and the other way round. The idle "
+         "sub-chain never leaves rest.", 13.5, BODY, first=True)
+_, tf = textbox(s, 8.30, 1.50, 4.31, 3.10)
+para(tf, "Checked two independent ways", 15, INK, bold=True, first=True)
+bullet(tf, [("96 .meas checks in the deck, ", {"b": True, "c": INK}),
+            ("enforced at all 42 sweep points: every node, both data values; "
+             "TRUE sub-chain high then back at rest, idle one never moves.", {})],
+       12.5, accent=LALC, before=8)
+bullet(tf, [("An independent decoder ", {"b": True, "c": INK}),
+            ("reads every node in every rail period: output = NOT input on "
+             "42 / 42 stage transfers at T_phase = 1, 10 and 100 ns, and "
+             "154 / 154 over 20 periods at 100 ns.", {})],
+       12.5, accent=LALC, before=8)
+bullet(tf, [("Constant data holds. ", {"b": True, "c": INK}),
+            ("Seed the same value twice and every node keeps it: the output "
+             "follows the data, it does not just toggle.", {})],
+       12.5, accent=BLUE, before=8)
+callout(s, 8.30, 4.72, 4.31, 2.08,
+        "Can the checks fail? We broke the circuit on purpose",
+        "T/C swapped on one stage: 24 of 96 fail. Restore gate removed: 48. "
+        "Wrong clock phase: 40. One stage made non-inverting: 16, with E_C "
+        "unchanged at 6.29 fJ, so only the logic checks can see it.",
+        WARN, TINTR, 13, 11.5)
+notes(s, "This is the 2LAL counterpart of the ECRL waveform slide. Point at "
+         "a 1 on node 3 and the 0 that appears on node 4 one tick later. "
+         "The mutation results are in verification/mutation_report.txt; the "
+         "non-inverting stage is the one to mention, because its energy is "
+         "indistinguishable from the correct circuit.")
+
 # ==================================================== 19. naive vs quad-rail
 s = slide()
 head(s, "The broken inverter has a measurable signature",
@@ -1066,8 +1105,8 @@ callout(s, 8.42, Y_TOP, 4.19, 2.05,
 rect(s, 8.42, 4.00, 4.19, 2.52, PANEL, radius=0.05)
 _, tf = textbox(s, 8.66, 4.18, 3.75, 2.20)
 para(tf, "The scripted pipeline", 13.5, INK, bold=True, first=True)
-for t in ["run_2lal_sweep.sh", "ecrl_exp1/run_ecrl_slowramp_sweep.sh",
-          "make_plots.py", "CHECKS.md"]:
+for t in ["2lal/run_2lal_sweep.sh", "ecrl/run_ecrl_slowramp_sweep.sh",
+          "plots/make_plots.py", "verification/verify_all.sh", "CHECKS.md"]:
     para(tf, t, 11.5, BODY, before=6, font=MONO)
 para(tf, "84 sweep points, no manual editing.", 12.5, MUT, italic=True,
      before=9)

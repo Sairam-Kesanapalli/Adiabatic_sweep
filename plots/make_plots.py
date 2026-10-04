@@ -5,11 +5,14 @@ ECRL experiments, in the same form the ECRL work already used.
 
 For each CSV it emits:
   <name>.cir   ngspice plot deck, same style as
-               ecrl_exp1/ecrl_energy_vs_transition_frequency.cir
+               ../ecrl/baseline/ecrl_energy_vs_transition_frequency.cir
                (run with:  ngspice <name>.cir)
   <name>.png   gnuplot render, for viewing without an X session
 
 Plus one overlay PNG comparing the two families at a chosen width.
+
+Reads ../2lal/2lal_inverter_sweep.csv and ../ecrl/ecrl_slowramp_sweep.csv;
+writes everything into this directory, wherever it is run from.
 """
 import csv, subprocess, sys, os
 
@@ -114,10 +117,11 @@ plot {', '.join(plots)}
     subprocess.run(["gnuplot"], input=gp, text=True, check=True)
 
 if __name__ == "__main__":
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
     jobs = [
-        ("2lal_inverter_sweep.csv", "2lal_energy_vs_ftr",
+        ("../2lal/2lal_inverter_sweep.csv", "2lal_energy_vs_ftr",
          "2LAL quad-rail inverter (8-stage ring): energy per operation vs transition frequency\\nsky130 tt, VDD 1.8 V, L = 0.15 um, CL = 25 fF per node"),
-        ("ecrl_exp1/ecrl_slowramp_sweep.csv", "ecrl_slowramp_energy_vs_ftr",
+        ("../ecrl/ecrl_slowramp_sweep.csv", "ecrl_slowramp_energy_vs_ftr",
          "ECRL inverter (adiabatic slow-ramp input, alternating data): energy per operation vs transition frequency\\nsky130 tt, VDD 1.8 V, L = 0.15 um, CL = 25 fF"),
     ]
     loaded = []

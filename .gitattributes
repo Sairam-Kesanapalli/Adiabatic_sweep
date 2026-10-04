@@ -1,0 +1,7 @@
+# Everything here is run by bash / ngspice / python on Linux or WSL.
+# CRLF breaks the shell scripts and the `^\.end$` edits the sweeps make to
+# the decks, so text files are always checked out with LF, even on Windows.
+* text=auto eol=lf
+
+*.png  binary
+*.pptx binary

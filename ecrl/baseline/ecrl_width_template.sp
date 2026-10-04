@@ -7,7 +7,7 @@
 * MUST COME BEFORE DEVICE INSTANCES
 * ------------------------------------------------------------
 
-.lib "./sky130-ngspice-models/libs.tech/ngspice/sky130.lib.spice" tt
+.lib "../../models/sky130-ngspice-models/libs.tech/ngspice/sky130.lib.spice" tt
 
 
 * ------------------------------------------------------------
@@ -68,11 +68,11 @@ B_INB INB 0 V={VDD-V(IN)}
 * MN2: D=OUT  G=IN  S=0 B=0
 * ------------------------------------------------------------
 
-XMP1 OUTB OUT  PHI PHI sky130_fd_pr__pfet_01v8 l=0.15 w=1 m=1
-XMP2 OUT  OUTB PHI PHI sky130_fd_pr__pfet_01v8 l=0.15 w=1 m=1
+XMP1 OUTB OUT  PHI PHI sky130_fd_pr__pfet_01v8 l={LPMOS} w={WPMOS} m=1
+XMP2 OUT  OUTB PHI PHI sky130_fd_pr__pfet_01v8 l={LPMOS} w={WPMOS} m=1
 
-XMN1 OUTB INB 0 0 sky130_fd_pr__nfet_01v8 l=0.15 w=1 m=1
-XMN2 OUT IN 0 0 sky130_fd_pr__nfet_01v8 l=0.15 w=1 m=1
+XMN1 OUTB INB 0 0 sky130_fd_pr__nfet_01v8 l={LNMOS} w={WNMOS} m=1
+XMN2 OUT IN 0 0 sky130_fd_pr__nfet_01v8 l={LNMOS} w={WNMOS} m=1
 
 * ------------------------------------------------------------
 * OUTPUT LOAD
@@ -86,12 +86,20 @@ CLOAD_OUTB OUTB 0 {CL}
 * TRANSIENT ANALYSIS
 * ============================================================
 
-.tran 10p {12*TPHASE}
+.tran 10p {8*TPHASE}
 
 .save V(PHI) V(IN) V(INB) V(OUT) V(OUTB) I(VPHI) V(PCLK)
 
 .print tran V(PHI) V(IN) V(INB) V(OUT) V(OUTB) I(VPHI) V(PCLK)
 
-.meas tran E_OP INTEG V(PCLK) FROM=40n TO=80n
+* Net energy delivered by the power-clock over one
+* complete settled ECRL cycle.
+*
+* Ngspice voltage-source current is defined into the
+* positive terminal, so:
+*
+* E_OP = integral[-V(PHI)*I(VPHI) dt]
+*
+.meas tran E_OP INTEG V(PCLK) FROM={4*TPHASE} TO={8*TPHASE}
 
 .end

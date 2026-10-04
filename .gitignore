@@ -1,7 +1,18 @@
-# PDK symlinks -> ~/.volare/sky130A (machine-specific, recreate with ln -s)
-sky130-ngspice-models
-ecrl_exp1/sky130-ngspice-models
+# PDK symlink -> a sky130A install (machine-specific, create with models/link_pdk.sh)
+models/sky130-ngspice-models
 
 # per-point decks and logs kept by the sweep scripts
-runs_2lal/
-ecrl_exp1/runs_ecrl_slowramp/
+2lal/runs_2lal/
+ecrl/runs_ecrl_slowramp/
+
+# raw waveform dumps, decks and logs from verification/ (tens of MB, regenerable)
+verification/data/
+
+__pycache__/
+
+# scratch files left by the one-off commands in CHECKS.md
+*.out
+try.sp
+static.sp
+full.sp
+fast.sp
