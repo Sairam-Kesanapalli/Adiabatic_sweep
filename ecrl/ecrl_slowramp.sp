@@ -1,7 +1,7 @@
 * ============================================================
 * ECRL INVERTER - SKY130 - v2, ADIABATIC (SLOW-RAMP) INPUT
 * ============================================================
-* Same circuit as ecrl_baseline.sp.  Two things changed:
+* Same circuit as baseline/ecrl_baseline.sp.  Two things changed:
 *
 * 1. THE INPUT NO LONGER STEPS.
 *    Baseline used TIN=100p regardless of TPHASE, so at TPHASE=100ns
@@ -27,7 +27,7 @@
 *   cycle 4  [16,20]  IN ramps 1->0   <- TEST B measured here
 * ============================================================
 
-.include "./sky130_01v8_tt_fast.spice"
+.include "../models/sky130_01v8_tt_fast.spice"
 
 * ------------------------------------------------------------
 * PARAMETERS

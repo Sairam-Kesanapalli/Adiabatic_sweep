@@ -1,0 +1,118 @@
+Waveform decode of the ECRL and 2LAL inverters  (python3 check_waveforms.py)
+Thresholds: high > 1.62 V, low < 0.18 V  (0.9 / 0.1 of VDD, same as the decks)
+
+ECRL inverter, TPHASE = 1 ns   (cycle k = [4k, 4k+4]*TPHASE, sampled mid-hold)
+  cycle  V(IN)  IN  V(OUT)  V(OUTB)  OUT=NOT IN   other output max during evaluate+hold
+    0     0.00  0    1.80    0.00     yes         0.016 V
+    1     1.80  1    0.00    1.80     yes         0.018 V
+    2     0.00  0    1.80    0.00     yes         0.018 V
+    3     1.80  1    0.00    1.80     yes         0.018 V
+    4     0.00  0    1.80    0.00     yes         0.018 V
+  -> PASS
+
+ECRL inverter, TPHASE = 10 ns   (cycle k = [4k, 4k+4]*TPHASE, sampled mid-hold)
+  cycle  V(IN)  IN  V(OUT)  V(OUTB)  OUT=NOT IN   other output max during evaluate+hold
+    0     0.00  0    1.80    0.00     yes         0.001 V
+    1     1.80  1    0.00    1.80     yes         0.001 V
+    2     0.00  0    1.80    0.00     yes         0.001 V
+    3     1.80  1    0.00    1.80     yes         0.001 V
+    4     0.00  0    1.80    0.00     yes         0.001 V
+  -> PASS
+  wrote figures/ecrl_inverter_T10.png
+
+ECRL inverter, TPHASE = 100 ns   (cycle k = [4k, 4k+4]*TPHASE, sampled mid-hold)
+  cycle  V(IN)  IN  V(OUT)  V(OUTB)  OUT=NOT IN   other output max during evaluate+hold
+    0     0.00  0    1.80    0.00     yes         0.000 V
+    1     1.80  1    0.00    1.80     yes         0.000 V
+    2     0.00  0    1.80    0.00     yes         0.000 V
+    3     1.80  1    0.00    1.80     yes         0.000 V
+    4     0.00  0    1.80    0.00     yes         0.000 V
+  -> PASS
+
+2LAL ring, alternating data, TPHASE = 1 ns
+  decoded logic value per node per rail period (1 = TRUE on a, 0 = TRUE on n):
+    period | n0  n1  n2  n3  n4  n5  n6  n7
+       0   |  0   1   0   1   1   0   1   0
+       1   |  1   0   1   0   0   1   0   1
+       2   |  0   1   0   1   1   0   1   0
+       3   |  1   0   1   0   0   1   0   1
+       4   |  0   1   0   1   1   0   1   0
+       5   |  1   0   -   -   0   1   -   -
+  every node, every period: exactly one sub-chain TRUE, idle one at rest .. PASS (44 node-periods)
+  every stage: output = NOT input one TPHASE later ......................... PASS (42/42)
+  agrees with the deck's own expected table (../2lal/2LAL_inverter_ring.sp) ........ PASS (16/16)
+  -> PASS
+
+2LAL ring, alternating data, TPHASE = 10 ns
+  decoded logic value per node per rail period (1 = TRUE on a, 0 = TRUE on n):
+    period | n0  n1  n2  n3  n4  n5  n6  n7
+       0   |  0   1   0   1   1   0   1   0
+       1   |  1   0   1   0   0   1   0   1
+       2   |  0   1   0   1   1   0   1   0
+       3   |  1   0   1   0   0   1   0   1
+       4   |  0   1   0   1   1   0   1   0
+       5   |  1   0   -   -   0   1   -   -
+  every node, every period: exactly one sub-chain TRUE, idle one at rest .. PASS (44 node-periods)
+  every stage: output = NOT input one TPHASE later ......................... PASS (42/42)
+  agrees with the deck's own expected table (../2lal/2LAL_inverter_ring.sp) ........ PASS (16/16)
+  -> PASS
+  wrote figures/2lal_inverter_stage_T10.png
+  wrote figures/2lal_ring_all_nodes_T10.png
+
+2LAL ring, alternating data, TPHASE = 100 ns
+  decoded logic value per node per rail period (1 = TRUE on a, 0 = TRUE on n):
+    period | n0  n1  n2  n3  n4  n5  n6  n7
+       0   |  0   1   0   1   1   0   1   0
+       1   |  1   0   1   0   0   1   0   1
+       2   |  0   1   0   1   1   0   1   0
+       3   |  1   0   1   0   0   1   0   1
+       4   |  0   1   0   1   1   0   1   0
+       5   |  1   0   -   -   0   1   -   -
+  every node, every period: exactly one sub-chain TRUE, idle one at rest .. PASS (44 node-periods)
+  every stage: output = NOT input one TPHASE later ......................... PASS (42/42)
+  agrees with the deck's own expected table (../2lal/2LAL_inverter_ring.sp) ........ PASS (16/16)
+  -> PASS
+
+2LAL ring, CONSTANT data (wave 1 seeded like wave 0), TPHASE = 10 ns
+  decoded logic value per node per rail period (1 = TRUE on a, 0 = TRUE on n):
+    period | n0  n1  n2  n3  n4  n5  n6  n7
+       0   |  1   0   1   0   1   0   1   0
+       1   |  1   0   1   0   1   0   1   0
+       2   |  1   0   1   0   1   0   1   0
+       3   |  1   0   1   0   1   0   1   0
+       4   |  1   0   1   0   1   0   1   0
+       5   |  1   0   -   -   1   0   -   -
+  every node, every period: exactly one sub-chain TRUE, idle one at rest .. PASS (44 node-periods)
+  every stage: output = NOT input one TPHASE later ......................... PASS (42/42)
+  constant data: every node holds one value in all periods ............. PASS
+  -> PASS
+  wrote figures/2lal_ring_constant_data_T10.png
+
+2LAL ring, 20 rail periods at TPHASE = 100 ns (does the data leak away?)
+  decoded logic value per node per rail period (1 = TRUE on a, 0 = TRUE on n):
+    period | n0  n1  n2  n3  n4  n5  n6  n7
+       0   |  0   1   0   1   1   0   1   0
+       1   |  1   0   1   0   0   1   0   1
+       2   |  0   1   0   1   1   0   1   0
+       3   |  1   0   1   0   0   1   0   1
+       4   |  0   1   0   1   1   0   1   0
+       5   |  1   0   1   0   0   1   0   1
+       6   |  0   1   0   1   1   0   1   0
+       7   |  1   0   1   0   0   1   0   1
+       8   |  0   1   0   1   1   0   1   0
+       9   |  1   0   1   0   0   1   0   1
+      10   |  0   1   0   1   1   0   1   0
+      11   |  1   0   1   0   0   1   0   1
+      12   |  0   1   0   1   1   0   1   0
+      13   |  1   0   1   0   0   1   0   1
+      14   |  0   1   0   1   1   0   1   0
+      15   |  1   0   1   0   0   1   0   1
+      16   |  0   1   0   1   1   0   1   0
+      17   |  1   0   1   0   0   1   0   1
+      18   |  0   1   0   1   1   0   1   0
+      19   |  1   0   -   -   0   1   -   -
+  every node, every period: exactly one sub-chain TRUE, idle one at rest .. PASS (156 node-periods)
+  every stage: output = NOT input one TPHASE later ......................... PASS (154/154)
+  -> PASS
+
+OVERALL: PASS

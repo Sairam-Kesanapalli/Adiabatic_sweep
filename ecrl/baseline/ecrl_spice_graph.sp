@@ -7,7 +7,7 @@
 * MUST COME BEFORE DEVICE INSTANCES
 * ------------------------------------------------------------
 
-.lib "./sky130-ngspice-models/libs.tech/ngspice/sky130.lib.spice" tt
+.lib "../../models/sky130-ngspice-models/libs.tech/ngspice/sky130.lib.spice" tt
 
 
 * ------------------------------------------------------------

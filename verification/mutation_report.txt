@@ -1,0 +1,14 @@
+Mutation test of the 96 functional checks in 2lal/2LAL_inverter_ring.sp
+(verification/mutation_test_2lal.sh, W = 1 um, TPHASE = 10 ns)
+
+mutant                             lines   checks fail  E_C (fJ)   expected / result
+M0_unmodified                      0       0/96         6.289      pass / ok
+M1_stage3_T_C_outputs_swapped      2       24/96        33.509     fail / ok (caught)
+M2_restore_gate_XR1_removed        1       48/96        102.385    fail / ok (caught)
+M3_stage3_does_not_invert          4       16/96        6.293      fail / ok (caught)
+M4_stage3_clocked_one_phase_late   4       40/96        153.868    fail / ok (caught)
+M5_forward_C_gate_XF2_removed      1       16/96        64.598     fail / ok (caught)
+M6_data_seed_not_alternating       4       32/96        6.250      fail / ok (caught)
+M7_1Mohm_leak_on_node_nT5          1       0/96         9.660      pass / ok
+
+OVERALL: PASS -- every logic defect tripped the checks; the clean deck passed all 96

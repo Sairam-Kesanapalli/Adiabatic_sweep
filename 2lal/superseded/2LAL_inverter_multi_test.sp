@@ -5,7 +5,7 @@
 * to 47x at slow clocks.  Use 2LAL_inverter_ring.sp (make_2lal_ring.py).
 * Kept only so earlier results can be reproduced.
 * 2LAL QUAD-RAIL INVERTER -- MULTI-TEST DECK
-* sky130 / ngspice.  Companion to ecrl_exp1/ecrl_slowramp.sp.
+* sky130 / ngspice.  Companion to ../ecrl/ecrl_slowramp.sp.
 * --------------------------------------------------------------------------
 * Derived from 2LAL_inverter.sp, reduced to the INVERTER only (the buffer,
 * the 4-FET cell and the naive rail-crossing chains are dropped) and
@@ -41,7 +41,7 @@
 *   stage latches a spurious 1 -- silently, because the 1s still look fine.
 * ==========================================================================
 
-.include "./sky130_01v8_tt_fast.spice"
+.include "../../models/sky130_01v8_tt_fast.spice"
 
 * ---------------------------------------------------------------- parameters
 .param VDD    = 1.8

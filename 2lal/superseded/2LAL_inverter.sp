@@ -59,7 +59,7 @@
 * (w=500e-9).  The two conventions are silently incompatible -- passing metres
 * here fails with "could not find a valid modelname", and passing microns to
 * the .pm3 files would ask for a half-metre device.  Do not mix them.
-.lib "./sky130-ngspice-models/libs.tech/ngspice/sky130.lib.spice" tt
+.lib "../../models/sky130-ngspice-models/libs.tech/ngspice/sky130.lib.spice" tt
 
 * ---------------------------------------------------------------- parameters
 .param Vp    = 1.8          ; rail amplitude / supply
