@@ -22,9 +22,9 @@ every run fails at the include step.  The link is not in git.
 | `ecrl/` | **ECRL deck in use** `ecrl_slowramp.sp`, its sweep script and CSV |
 | `ecrl/baseline/` | your original ECRL deck, width sweep, CSV and ngspice plot decks (unchanged) |
 | `2lal/` | **2LAL deck in use** `2LAL_inverter_ring.sp` (8-stage ring), its generator `make_2lal_ring.py`, sweep script and CSV |
-| `2lal/superseded/` | the open-chain 2LAL decks: their last node is never restored, which inflates the energy (up to 47x) |
+| `2lal/superseded/` | the open-chain 2LAL decks: their last node is never restored, which inflates the energy (up to 47x); `2lal_inverter_sweep_openchain.csv` is their last sweep, kept as the negative case for section 5b |
 | `plots/` | `make_plots.py` and the energy plots it writes (`.png`, `.png.dat`, ngspice `.cir`) |
-| `verification/` | waveform dumps, the independent decoder, the mutation test, their reports and figures |
+| `verification/` | waveform dumps, the independent decoder, the mutation test, the energy-meter calibration, their reports and figures |
 | `slides/` | `make_slides.py`, the deck it builds, and `figs/` |
 
 ---
@@ -136,8 +136,9 @@ the prediction as a comment above each group: `* node m, period P: TRUE on a`.
   data); a deliberately different seed fails them, which is mutant M6.
   `check_waveforms.py` covers constant data separately.  (2) They are logic
   checks, not energy checks: a leak that wastes energy but keeps the logic
-  intact passes (M7).  Energy is guarded by the settling check, section 5,
-  and the chain-boundary experiment that motivated the ring.  (3) The TRUE side
+  intact passes (M7).  Energy is guarded by the settling check, the
+  calibration in section 5b, and the chain-boundary experiment that
+  motivated the ring.  (3) The TRUE side
   is sampled at two instants, not monitored continuously.  (4) Only rail periods
   3 and 4 are checked; the decoder covers periods 0..5 (and 0..19 in the long run).
 
@@ -179,7 +180,7 @@ Read a result:
 
 ## 5. Check the inverters at the waveform level
 
-    verification/verify_all.sh       # ~3 min, runs the three steps below
+    verification/verify_all.sh       # ~4 min, runs the steps below and section 5b
 
     verification/run_waveforms.sh            # -> verification/data/ (not in git)
     python3 verification/check_waveforms.py  # -> waveform_report.txt, figures/
@@ -198,6 +199,52 @@ Figures in `verification/figures/`:
 | `2lal_inverter_stage_T10.png` | one 2LAL stage: rails, input node 3, output node 4 |
 | `2lal_ring_all_nodes_T10.png` | all 8 ring nodes, alternating data |
 | `2lal_ring_constant_data_T10.png` | all 8 ring nodes, constant data |
+
+### 5b. Check the energy meter, and that both families obey their energy model
+
+    verification/run_calibration.sh          # ~2 min -> verification/data/calibration/
+    python3 verification/check_calibration.py  # -> calibration_report.txt, exit 1 on failure
+
+Check 1 asks whether the energy numbers can be trusted at all:
+
+* **1a, against static CMOS.** `cal_cmos.sp` puts a CMOS inverter through the
+  2LAL deck's own 1 F energy integrator at CL = 0..100 fF.  Energy per cycle is
+  (CL + Cpar)*VDD^2 + short-circuit energy, so dE/dCL must be VDD^2 = 3.24 fJ/fF
+  whatever the unknowns are.  Measured 3.250 (+0.3 %), the same at 40 and
+  400 ns.  It also gives the "no adiabatic benefit" line: 43.8 fJ per transition.
+* **1b, convergence.** Both decks at TPHASE = 1, 10, 100 ns with the maximum
+  step cut 4x (2LAL TPHASE/2000, ECRL 4 ps) and reltol 1e-6: nothing moves by
+  more than 0.06 %.  (TPHASE/2500 and 2 ps hit "timestep too small" at a pulse
+  corner, which is why the cut is 4x and 2.5x.)
+* **1c, an adiabatic case with an exact answer.** `cal_rc.sp` drives an ideal
+  10 kohm / 25 fF from the rail trapezoid.  About 81 fJ goes out and comes back
+  each period; the meter has to find the 0.4-30 fJ residue between two nearly
+  cancelling flows, which static CMOS never tests.  The checker solves the RC
+  equation itself and the meter agrees to 0.01 %.
+
+Check 2 fits both sweeps to E(T) = K*g(T, tau) + b + c*T, where g is the exact
+loss of one RC ramp (-> tau/T for T >> tau), b a fixed residue and c*T leakage:
+
+* **2LAL is fully adiabatic.** Fit RMS 0.4-1.1 %, residue |b| <= 0.17 % of
+  CL*VDD^2 at every width.  The 1/T coefficient matches the transmission gate's
+  measured on-resistance (`cal_tg_ron.sp`): solving a = 4*C_eff^2*VDD^2*R_mean
+  for the node capacitance gives C_eff = 24.7 fF + 7.1 fF/um * W, and the
+  intercept lands on the deck's 25 fF load.
+* **ECRL keeps a threshold residue**, b ~ 15 fJ = 18 % of CL*VDD^2.  An energy
+  split by device and clock phase closes on the total within 1.5 %; 69 % of it
+  at 100 ns is the pull-up pFET on the clock rise.  Integrating that catch-up
+  from the pFET's DC table alone (`cal_pfet_rise.sp`, no transient) predicts
+  83-84 % of it at 10 and 100 ns.  The fitted c comes out negative because the
+  residue shrinks slowly with T: the output's residual voltage falls from
+  0.72 V at 1 ns to 0.42 V at 100 ns.
+
+**The 2LAL test is run against the bug it exists to catch, every time.**
+`2lal/superseded/2lal_inverter_sweep_openchain.csv` is the last sweep of the
+open-chain deck (from commit d8369e0^, before the ring).  The checker runs the
+same fit on it and *requires* every width to be rejected; today all six are
+(RMS 11-21 %, residue 16-83 % of CL*VDD^2).  If a later change to the fit or
+its thresholds let that data pass, the check `open-chain 2LAL rejected at
+every width` fails.
 
 ---
 
