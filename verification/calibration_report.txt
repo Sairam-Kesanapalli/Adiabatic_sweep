@@ -45,17 +45,28 @@ VDD = 1.8 V, so VDD^2 = 3.240 fJ/fF
 2LAL ring (../2lal/2lal_inverter_sweep.csv)
   W(um)  a=K*tau(fJ*ns)  tau(ns)  b(fJ)   c(fJ/ns)   RMS     max    b / CL*VDD^2
    0.84       68.02      0.277   0.137    0.00454   1.14 %   2.22 %   +0.17 %
-  2 2LAL fully adiabatic, W = 0.84: RMS < 3 %, |b| < 1 % CV^2 ... PASS (RMS 1.14 %, b +0.17 %)
     1.0       62.60      0.280   0.114    0.00191   1.08 %   2.08 %   +0.14 %
-  2 2LAL fully adiabatic, W = 1.0: RMS < 3 %, |b| < 1 % CV^2 ... PASS (RMS 1.08 %, b +0.14 %)
     1.2       57.44      0.263   0.079    0.00018   0.90 %   1.76 %   +0.10 %
-  2 2LAL fully adiabatic, W = 1.2: RMS < 3 %, |b| < 1 % CV^2 ... PASS (RMS 0.90 %, b +0.10 %)
     1.5       49.24      0.228   0.039    0.00087   0.61 %   1.25 %   +0.05 %
-  2 2LAL fully adiabatic, W = 1.5: RMS < 3 %, |b| < 1 % CV^2 ... PASS (RMS 0.61 %, b +0.05 %)
     2.0       45.47      0.217   0.033    0.00259   0.59 %   1.22 %   +0.04 %
-  2 2LAL fully adiabatic, W = 2.0: RMS < 3 %, |b| < 1 % CV^2 ... PASS (RMS 0.59 %, b +0.04 %)
     3.0       41.61      0.189   0.021    0.00461   0.44 %   0.92 %   +0.03 %
+  2 2LAL fully adiabatic, W = 0.84: RMS < 3 %, |b| < 1 % CV^2 ... PASS (RMS 1.14 %, b +0.17 %)
+  2 2LAL fully adiabatic, W = 1.0: RMS < 3 %, |b| < 1 % CV^2 ... PASS (RMS 1.08 %, b +0.14 %)
+  2 2LAL fully adiabatic, W = 1.2: RMS < 3 %, |b| < 1 % CV^2 ... PASS (RMS 0.90 %, b +0.10 %)
+  2 2LAL fully adiabatic, W = 1.5: RMS < 3 %, |b| < 1 % CV^2 ... PASS (RMS 0.61 %, b +0.05 %)
+  2 2LAL fully adiabatic, W = 2.0: RMS < 3 %, |b| < 1 % CV^2 ... PASS (RMS 0.59 %, b +0.04 %)
   2 2LAL fully adiabatic, W = 3.0: RMS < 3 %, |b| < 1 % CV^2 ... PASS (RMS 0.44 %, b +0.03 %)
+
+  Negative case: the same test on the open-chain sweep it exists to catch
+  (../2lal/superseded/2lal_inverter_sweep_openchain.csv)
+  W(um)  a=K*tau(fJ*ns)  tau(ns)  b(fJ)   c(fJ/ns)   RMS     max    b / CL*VDD^2
+   0.84       47.70      0.010  12.725    0.35061  11.12 %  26.61 %  +15.71 %
+    1.0       46.72      0.010  14.179    0.35078  12.13 %  27.61 %  +17.50 %
+    1.2       47.10      0.010  17.131    0.33605  14.89 %  25.21 %  +21.15 %
+    1.5       29.06      0.010  24.948    0.27039  20.20 %  36.28 %  +30.80 %
+    2.0       17.75      0.010  36.622    0.17039  20.72 %  25.78 %  +45.21 %
+    3.0      -99.28      2.947  67.077   -0.11005  16.57 %  32.48 %  +82.81 %
+  2 open-chain 2LAL rejected at every width ................... PASS (6/6 widths rejected)
 
   TG on-resistance (cal_tg_ron.sp) and the node capacitance it implies, using the
   b = 0 fit:  a = 4 * C_eff^2 * VDD^2 * R_mean
@@ -101,4 +112,4 @@ ECRL (../ecrl/ecrl_slowramp_sweep.csv)
   2 ECRL rise loss predicted from DC data, 100 ns: 75-100 % ... PASS (84 %)
   (at 1 ns the ramp is only 4 tau, so the RC term the DC model leaves out dominates)
 
-OVERALL: PASS  (27/27 checks)
+OVERALL: PASS  (28/28 checks)

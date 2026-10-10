@@ -22,7 +22,7 @@ every run fails at the include step.  The link is not in git.
 | `ecrl/` | **ECRL deck in use** `ecrl_slowramp.sp`, its sweep script and CSV |
 | `ecrl/baseline/` | your original ECRL deck, width sweep, CSV and ngspice plot decks (unchanged) |
 | `2lal/` | **2LAL deck in use** `2LAL_inverter_ring.sp` (8-stage ring), its generator `make_2lal_ring.py`, sweep script and CSV |
-| `2lal/superseded/` | the open-chain 2LAL decks: their last node is never restored, which inflates the energy (up to 47x) |
+| `2lal/superseded/` | the open-chain 2LAL decks: their last node is never restored, which inflates the energy (up to 47x); `2lal_inverter_sweep_openchain.csv` is their last sweep, kept as the negative case for section 5b |
 | `plots/` | `make_plots.py` and the energy plots it writes (`.png`, `.png.dat`, ngspice `.cir`) |
 | `verification/` | waveform dumps, the independent decoder, the mutation test, the energy-meter calibration, their reports and figures |
 | `slides/` | `make_slides.py`, the deck it builds, and `figs/` |
@@ -238,8 +238,13 @@ loss of one RC ramp (-> tau/T for T >> tau), b a fixed residue and c*T leakage:
   residue shrinks slowly with T: the output's residual voltage falls from
   0.72 V at 1 ns to 0.42 V at 100 ns.
 
-The checker is pointed at the open-chain CSV it would have to reject: all six
-2LAL widths fail (RMS 11-21 %, residue 16-83 % of CL*VDD^2).
+**The 2LAL test is run against the bug it exists to catch, every time.**
+`2lal/superseded/2lal_inverter_sweep_openchain.csv` is the last sweep of the
+open-chain deck (from commit d8369e0^, before the ring).  The checker runs the
+same fit on it and *requires* every width to be rejected; today all six are
+(RMS 11-21 %, residue 16-83 % of CL*VDD^2).  If a later change to the fit or
+its thresholds let that data pass, the check `open-chain 2LAL rejected at
+every width` fails.
 
 ---
 

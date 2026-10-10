@@ -27,6 +27,11 @@ Check 2 -- the physics
         must match the measured TG on-resistance: a = 4*C_eff^2*V^2*R_mean
         (4 node swings per op) gives C_eff = c0 + k*W, and c0 must land
         within 10 % of the 25 fF load.
+        Negative case: the same test must REJECT every width of the open-chain
+        sweep (../2lal/superseded/2lal_inverter_sweep_openchain.csv, the last
+        sweep of the open-chain deck, commit d8369e0^), whose unrestored chain
+        end inflates the slow-clock energy.  If it ever passes, the test has
+        lost the power to see the bug it was written for.
   ECRL  must keep a threshold residue: b > 5 % of CL*VDD^2.  Its device-by-phase
         energy split must close on the total within 2 %, and the clock-rise
         loss predicted from the pFET DC table alone must be 75-100 % of the
@@ -44,6 +49,7 @@ os.chdir(HERE)
 DATA = os.path.join("data", "calibration")
 REPORT = "calibration_report.txt"
 CSV_2LAL = os.path.join("..", "2lal", "2lal_inverter_sweep.csv")
+CSV_OPEN = os.path.join("..", "2lal", "superseded", "2lal_inverter_sweep_openchain.csv")
 CSV_ECRL = os.path.join("..", "ecrl", "ecrl_slowramp_sweep.csv")
 
 out_lines = []
@@ -214,27 +220,40 @@ for T in (1, 10, 100):
 say()
 
 # ============================================================ check 2: 2LAL
+def adiabatic_fits(path):
+    """fit every width of a 2LAL sweep; print the table; [(W, ok, f, a_b0)]"""
+    say("  W(um)  a=K*tau(fJ*ns)  tau(ns)  b(fJ)   c(fJ/ns)   RMS     max    b / CL*VDD^2")
+    rows = []
+    for W, pts in sweep_csv(path).items():
+        T, E = [p[0] for p in pts], [p[1] for p in pts]
+        f = fit_energy(T, E, True)
+        f["bfrac"] = f["b"] / CV2
+        say(f"  {W:5}  {f['a']:10.2f}     {f['tau']:6.3f}  {f['b']:6.3f}  {f['c']:9.5f}  "
+            f"{100*f['rms']:5.2f} %  {100*f['max']:5.2f} %  {100*f['bfrac']:+6.2f} %")
+        ok = f["rms"] < 0.03 and abs(f["bfrac"]) < 0.01
+        rows.append((W, ok, f, fit_energy(T, E, False)["a"]))
+    return rows
+
 say("2. Fit E(T) = K*g(T,tau) + b + c*T   (T = TPHASE in ns, E in fJ)")
 say("2LAL ring (" + CSV_2LAL + ")")
-say("  W(um)  a=K*tau(fJ*ns)  tau(ns)  b(fJ)   c(fJ/ns)   RMS     max    b / CL*VDD^2")
-lal = sweep_csv(CSV_2LAL)
-a0 = {}
-for W, pts in lal.items():
-    T, E = [p[0] for p in pts], [p[1] for p in pts]
-    f = fit_energy(T, E, True)
-    a0[W] = fit_energy(T, E, False)["a"]
-    bfrac = f["b"] / CV2
-    say(f"  {W:5}  {f['a']:10.2f}     {f['tau']:6.3f}  {f['b']:6.3f}  {f['c']:9.5f}  "
-        f"{100*f['rms']:5.2f} %  {100*f['max']:5.2f} %  {100*bfrac:+6.2f} %")
-    verdict(f"2 2LAL fully adiabatic, W = {W}: RMS < 3 %, |b| < 1 % CV^2",
-            f["rms"] < 0.03 and abs(bfrac) < 0.01,
-            f"RMS {100*f['rms']:.2f} %, b {100*bfrac:+.2f} %")
+lal = adiabatic_fits(CSV_2LAL)
+for W, ok, f, _ in lal:
+    verdict(f"2 2LAL fully adiabatic, W = {W}: RMS < 3 %, |b| < 1 % CV^2", ok,
+            f"RMS {100*f['rms']:.2f} %, b {100*f['bfrac']:+.2f} %")
+a0 = {W: a for W, _, _, a in lal}
+
+say("\n  Negative case: the same test on the open-chain sweep it exists to catch")
+say("  (" + CSV_OPEN + ")")
+bad = adiabatic_fits(CSV_OPEN)
+passed = [W for W, ok, _, _ in bad if ok]
+verdict("2 open-chain 2LAL rejected at every width", len(bad) == 6 and not passed,
+        f"{len(bad) - len(passed)}/{len(bad)} widths rejected")
 
 say("\n  TG on-resistance (cal_tg_ron.sp) and the node capacitance it implies, using the")
 say("  b = 0 fit:  a = 4 * C_eff^2 * VDD^2 * R_mean")
 say("  W(um)  R_mean(kohm)  a(fJ*ns)  C_eff(fF)")
 Ws, Ce = [], []
-for W in lal:
+for W in a0:
     R = [0.01 / -i for _, i in wrdata(f"tg_W{W}")]
     rm = sum(R) / len(R)
     c = math.sqrt(a0[W] * 1e-24 / (4 * VDD**2 * rm)) * 1e15
