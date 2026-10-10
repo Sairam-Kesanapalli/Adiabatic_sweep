@@ -483,9 +483,9 @@ para(tf, [("f_clock", {"b": True, "c": BLUE}),
 para(tf, "T_clock = 4 · T_phase  →  f_tr = 4 · f_clock", 13.5,
      INK, bold=True, before=10)
 notes(s, "Be explicit about this before showing any graph. A reviewer who "
-         "assumes f_clock when we plot f_tr will think our crossover is at "
-         "25 MHz when it is at 100 MHz on our axis. Both versions of every "
-         "plot are in the repo.")
+         "assumes f_clock when we plot f_tr will misread every frequency on "
+         "our axes by a factor of four. Both versions of every plot are in "
+         "the repo.")
 
 # =============================================================== 8. setup
 s = slide()
@@ -871,9 +871,10 @@ bullet(tf, [("The two correct curves track each other. ", {"b": True, "c": LALC}
              "at every frequency — the expected cost of carrying two "
              "chains instead of one, and a useful self-check that the "
              "implementation is right.", {})], 13.5, accent=LALC, before=9)
-bullet(tf, [("The upturn below ~50 MHz is real. ", {"b": True, "c": BLUE}),
-            ("That is the leakage floor, not a broken circuit — the logic "
-             "is still correct there.", {})], 13.5, accent=BLUE, before=9)
+bullet(tf, [("The upturn below ~50 MHz is not leakage. ", {"b": True, "c": BLUE}),
+            ("This is the superseded open-chain deck; its unrestored last "
+             "node inflates slow-clock energy. Slide 20 uses the ring.", {})],
+       13.5, accent=BLUE, before=9)
 notes(s, "The 2.000x is the strongest single piece of evidence that the "
          "quad-rail construction is implemented correctly. If it were wrong "
          "in some subtle way, there is no reason it would land on a clean "
@@ -885,30 +886,30 @@ head(s, "2LAL: energy per operation against frequency",
      "part ii · result", kcolor=LALC)
 pic(s, F("2lal_energy_vs_ftr.png"), M - 0.10, 1.42, 7.90, 5.05)
 _, tf = textbox(s, 8.30, 1.52, 4.31, 5.0)
-para(tf, "A minimum, not a monotone", 15, INK, bold=True, first=True)
-para(tf, "Unlike ECRL, the 2LAL curve turns up at both ends. The minimum sits "
-         "near f_tr = 100 MHz.", 13.5, BODY, before=6)
-bullet(tf, [("Above it: ", {"b": True, "c": INK}),
-            ("the same resistive RC/T loss ECRL has.", {})],
-       13.5, accent=ECRLC, before=11)
-bullet(tf, [("Below it: ", {"b": True, "c": INK}),
-            ("a leakage floor. 16 transistors per column hold charge "
-             "for progressively longer, which costs more the slower you run. "
-             "Confirmed as leakage, not a malfunction: the logic is still "
-             "correct at 10 MHz.", {})],
+para(tf, "Falls all the way down", 15, INK, bold=True, first=True)
+para(tf, "No floor in this range: 46.1 fJ at f_tr = 1000 MHz down to "
+         "0.93 fJ at 10 MHz (W = 1.0 µm), about 7× per decade.",
+     13.5, BODY, before=6)
+bullet(tf, [("That is the fully adiabatic signature: ", {"b": True, "c": INK}),
+            ("only the resistive RC/T loss, with no threshold residue "
+             "of the kind ECRL keeps.", {})],
+       13.5, accent=LALC, before=11)
+bullet(tf, [("Wider is better down to 50 MHz. ", {"b": True, "c": INK}),
+            ("At 1000 MHz, W = 3.0 µm costs 33% less than "
+             "W = 0.84 µm (33.9 against 50.3 fJ): the pass gates are "
+             "resistance-limited.", {})],
        13.5, accent=BLUE, before=9)
-bullet(tf, [("Wider is worse here, at every frequency. ", {"b": True, "c": WARN}),
-            ("The opposite of ECRL. These pass gates are not "
-             "resistance-limited here, so width buys nothing and costs "
-             "capacitance and leakage.", {})],
+bullet(tf, [("At 10 MHz the widest devices turn back up. ", {"b": True, "c": WARN}),
+            ("W = 1.5 µm is lowest (0.62 fJ), W = 3.0 µm costs 0.90 fJ, "
+             "consistent with leakage that grows with width.", {})],
        13.5, accent=WARN, before=9)
-para(tf, "That single difference in the sizing trend is, on its own, a useful "
-         "design result: in 2LAL, do not upsize.", 13.5, INK, bold=True,
-     before=13)
-notes(s, "Contrast the two width families explicitly. In ECRL sizing up helps "
-         "at high frequency. In 2LAL it hurts everywhere we measured. Those "
-         "are different design rules for two families that superficially do "
-         "the same job.")
+para(tf, "Design result: in 2LAL, size up for speed, but stop near 1.5 µm "
+         "for slow clocks.", 13.5, INK, bold=True, before=13)
+notes(s, "This is the 8-stage ring deck. An earlier version of this slide "
+         "showed a minimum near 100 MHz and a 'leakage floor' below it; both "
+         "came from the open-chain deck, whose last node was never restored. "
+         "In both families width helps at high frequency; only 2LAL shows a "
+         "width optimum at the slow end.")
 
 # ================================================== 21. section: comparison
 s = slide(dark=True)
@@ -969,8 +970,8 @@ table(s, M, 2.56, 7.35,
         "V(PCLK) over [12·Tp, 16·Tp] = one T_clock",
         "1 gate × 1 cycle"],
        [[("2LAL", {"b": True, "c": LALC})],
-        "rail energy over one T_rail = 4·Tp",
-        "4 metered columns"]],
+        "rail energy over four T_rail = 16·Tp",
+        "8 ring columns × 4 periods"]],
       [0.8, 3.0, 1.6], hrow=0.52, hhdr=0.36, size=12.5, hsize=11.5)
 _, tf = textbox(s, M, 4.34, 7.35, 2.4)
 para(tf, "Neither family is free when idle.", 14.5, INK, bold=True, first=True)
@@ -1006,26 +1007,27 @@ head(s, "ECRL against 2LAL, matched conditions", "part iii · result")
 pic(s, F("ecrl_vs_2lal_W1.0.png"), M + 0.55, 1.40, 7.60, 4.85)
 _, tf = textbox(s, 8.42, 1.50, 4.19, 4.9)
 para(tf, "Three things to take away", 15, INK, bold=True, first=True)
-bullet(tf, [("They tie at f_tr = 100 MHz. ", {"b": True, "c": INK}),
-            ("21.66 fJ against 21.62 fJ. Not a coincidence — both are "
-             "doing the same physical work, one 25 fF node charged and "
-             "discharged adiabatically per operation.", {})],
-       13.5, accent=MUT, before=11)
-bullet(tf, [("2LAL's advantage band is narrow and modest. ", {"b": True, "c": LALC}),
-            ("f_tr 200–500 MHz, and only by 7–13%.", {})],
-       13.5, accent=LALC, before=10)
-bullet(tf, [("ECRL wins clearly at low frequency. ", {"b": True, "c": ECRLC}),
-            ("3.5× better at 10 MHz, because 2LAL's leakage floor "
-             "— 16 transistors per column against ECRL's 4 — turns "
-             "its curve upward.", {})], 13.5, accent=ECRLC, before=10)
+bullet(tf, [("2LAL is lower at every frequency. ", {"b": True, "c": LALC}),
+            ("From 1.19× at 1000 MHz to 13.4× at 10 MHz. At 100 MHz: "
+             "21.66 fJ against 6.29 fJ.", {})],
+       13.5, accent=LALC, before=11)
+bullet(tf, [("The gap widens as the clock slows. ", {"b": True, "c": INK}),
+            ("ECRL keeps a threshold residue, C·|Vtp|²/2, that speed "
+             "does not remove; 2LAL keeps falling with T_phase.", {})],
+       13.5, accent=MUT, before=10)
+bullet(tf, [("2LAL pays in transistors, not energy. ", {"b": True, "c": ECRLC}),
+            ("16 per quad-rail column against ECRL's 4, and two "
+             "25 fF nodes swung per operation against one.", {})],
+       13.5, accent=ECRLC, before=10)
 rect(s, 8.42, 5.32, 4.19, 1.10, PANEL, radius=0.05)
 _, tf = textbox(s, 8.66, 5.46, 3.75, 0.85)
-para(tf, "There is no headline “2LAL beats ECRL” result here, and we "
-         "are not going to manufacture one.", 13, INK, bold=True, first=True)
-notes(s, "Resist the temptation to declare a winner. The honest finding is "
-         "that under matched conditions these two families are much closer "
-         "than the literature's enthusiasm suggests, and which one wins "
-         "depends entirely on where you sit on the frequency axis.")
+para(tf, "Fully adiabatic beats quasi-adiabatic on energy, by a margin that "
+         "grows as the clock slows.", 13, INK, bold=True, first=True)
+notes(s, "An earlier version of this slide reported a tie at 100 MHz and an "
+         "ECRL win at low frequency. Both came from the open-chain 2LAL deck, "
+         "whose last node was never restored; closing it into a ring removed "
+         "them. The ordering now matches what quasi- versus fully-adiabatic "
+         "theory predicts.")
 
 # ============================================================= 25. the table
 s = slide()
@@ -1033,35 +1035,34 @@ head(s, "The numbers behind that curve", "part iii · result",
      sub="W = 1.0 µm, L = 0.15 µm, C_L = 25 fF, same T_phase, "
          "alternating data. Energy per operation, in fJ.")
 rows = [["T_phase", "f_tr", "f_clock", "ECRL", "2LAL", "outcome"],
-        ["100 ns", "10 MHz", "2.5 MHz", "12.46", "44.05",
-         [("ECRL by 3.5×", {"c": ECRLC, "b": True})]],
-        ["50 ns", "20 MHz", "5 MHz", "14.37", "45.11",
-         [("ECRL by 3.1×", {"c": ECRLC, "b": True})]],
-        ["20 ns", "50 MHz", "12.5 MHz", "17.83", "23.97",
-         [("ECRL by 1.34×", {"c": ECRLC, "b": True})]],
-        ["10 ns", "100 MHz", "25 MHz", "21.66", "21.62",
-         [("tie", {"c": MUT, "b": True})]],
-        ["5 ns", "200 MHz", "50 MHz", "27.32", "23.87",
-         [("2LAL by 13%", {"c": LALC, "b": True})]],
-        ["2 ns", "500 MHz", "125 MHz", "39.82", "36.86",
-         [("2LAL by 7%", {"c": LALC, "b": True})]],
-        ["1 ns", "1000 MHz", "250 MHz", "54.69", "64.95",
-         [("ECRL by 1.19×", {"c": ECRLC, "b": True})]]]
+        ["100 ns", "10 MHz", "2.5 MHz", "12.46", "0.93",
+         [("2LAL by 13.4×", {"c": LALC, "b": True})]],
+        ["50 ns", "20 MHz", "5 MHz", "14.37", "1.44",
+         [("2LAL by 10.0×", {"c": LALC, "b": True})]],
+        ["20 ns", "50 MHz", "12.5 MHz", "17.83", "3.27",
+         [("2LAL by 5.5×", {"c": LALC, "b": True})]],
+        ["10 ns", "100 MHz", "25 MHz", "21.66", "6.29",
+         [("2LAL by 3.4×", {"c": LALC, "b": True})]],
+        ["5 ns", "200 MHz", "50 MHz", "27.32", "11.93",
+         [("2LAL by 2.3×", {"c": LALC, "b": True})]],
+        ["2 ns", "500 MHz", "125 MHz", "39.82", "26.49",
+         [("2LAL by 1.50×", {"c": LALC, "b": True})]],
+        ["1 ns", "1000 MHz", "250 MHz", "54.69", "46.10",
+         [("2LAL by 1.19×", {"c": LALC, "b": True})]]]
 table(s, M, 1.92, 7.75, rows, [1.0, 1.05, 1.1, 0.95, 0.95, 1.5],
       hrow=0.415, hhdr=0.40, size=13, hsize=12,
       align=[PP_ALIGN.LEFT, PP_ALIGN.RIGHT, PP_ALIGN.RIGHT, PP_ALIGN.RIGHT,
              PP_ALIGN.RIGHT, PP_ALIGN.LEFT])
 callout(s, 8.72, 1.92, 3.89, 2.30,
         "Reading it honestly",
-        "Both families are within a factor of two of each other across four "
-        "fifths of the range. The crossover is a genuine crossing, not a gap "
-        "— and it sits at a frequency where neither design is obviously "
-        "the one you would reach for.", ECRLC, PANEL)
+        "2LAL is ahead at every point, and the margin grows steadily as the "
+        "clock slows. There is no crossover inside 1–1000 MHz; if one "
+        "exists it lies above 1 GHz, where both are RC-limited.", LALC, PANEL)
 callout(s, 8.72, 4.38, 3.89, 2.44,
         "The caveat to quote with these numbers",
-        "Switched capacitance per operation is equal, which is what makes the "
-        "energy comparison legitimate. Standing capacitance, area and leakage "
-        "are not: 16 FETs and 4 loaded nodes against 4 FETs and 2.",
+        "The comparison is not capacitance-matched in 2LAL's favour: each "
+        "2LAL operation swings two 25 fF nodes (T and C) against one for "
+        "ECRL, with 16 FETs against 4. 2LAL is ahead despite that.",
         WARN, TINTR)
 notes(s, "Every cell in this table is a row in a CSV that came out of a "
          "scripted ngspice run. Slide 27 shows the provenance chain for one "
@@ -1077,7 +1078,7 @@ bullet(tf, [("Nothing is hand-entered. ", {"b": True, "c": INK}),
              "number in them came out of ngspice.", {})],
        14.5, accent=LALC, before=0, first=True)
 bullet(tf, [("Worked provenance example. ", {"b": True, "c": INK}),
-            ("2.16179e-14 J appears identically in the run log, in the CSV row "
+            ("6.28912e-15 J appears identically in the run log, in the CSV row "
              "1.0,10,…, in the .dat file handed to gnuplot, and as the "
              "plotted point. Three independent greps, one number.", {})],
        14.5, accent=LALC, before=11)
@@ -1098,10 +1099,10 @@ bullet(tf, [("CHECKS.md. ", {"b": True, "c": INK}),
        14.5, accent=BLUE, before=11)
 callout(s, 8.42, Y_TOP, 4.19, 2.05,
         "Errors we caught in our own review",
-        "A femtojoule / attojoule unit slip that had produced a spurious "
-        "~1000× claim in favour of 2LAL, and a “625,000×” "
-        "that should have read 625×. Both corrected before anything was "
-        "plotted.", WARN, TINTR)
+        "A fJ/aJ unit slip (a spurious ~1000× for 2LAL), a "
+        "“625,000×” that should have read 625×, and an open 2LAL "
+        "chain whose unrestored end inflated its energy up to 47× — "
+        "fixed by closing it into a ring.", WARN, TINTR)
 rect(s, 8.42, 4.00, 4.19, 2.52, PANEL, radius=0.05)
 _, tf = textbox(s, 8.66, 4.18, 3.75, 2.20)
 para(tf, "The scripted pipeline", 13.5, INK, bold=True, first=True)
@@ -1166,9 +1167,9 @@ nxt = [
     ("Check the 2LAL cell against the primary source", "If Figure 2 of the "
      "source paper can be obtained, verify our reconstruction against it "
      "rather than against secondary sources.", BLUE),
-    ("Separate the leakage floor from the switching term", "Measure at zero "
+    ("Separate leakage from the switching term", "Measure at zero "
      "activity and subtract, so the RC/T term can be isolated. That would "
-     "explain the 2LAL upturn quantitatively instead of by inference.", BLUE),
+     "pin down where extra width stops helping 2LAL at slow clocks.", BLUE),
     ("The paper's other two axes", "Sweep supply voltage and load "
      "capacitance, which the 1996 work also varies and we have not.", MUT),
     ("Layout and extracted parasitics", "Move from schematic-level SKY130 to "
@@ -1187,8 +1188,8 @@ for i, (t, d, c) in enumerate(nxt):
     _, tf = textbox(s, M + 4.10, y + 0.13, CW - 4.40, 0.60)
     para(tf, d, 12.5, BODY, first=True)
     y += 0.875
-notes(s, "Lead with the first one if asked what is most important. The "
-         "inverter comparison is close to a tie; real logic is where the "
+notes(s, "Lead with the first one if asked what is most important. On the "
+         "inverter 2LAL wins on energy everywhere; real logic is where the "
          "topologies diverge, because a 2LAL gate does logic in the pass "
          "network while ECRL does it in the pull-down tree.")
 
@@ -1209,8 +1210,8 @@ cards = [
      "numbers", WARN),
     ("Measured", "84 scripted sweep points: 2 families × 6 widths "
      "× 7 frequencies, fully reproducible", BLUE),
-    ("Compared", "ECRL below 100 MHz, a tie at 100 MHz, 2LAL by 7–13% in "
-     "a narrow 200–500 MHz band", LALC),
+    ("Compared", "2LAL lower at every frequency: 1.19× at 1000 MHz, "
+     "13.4× at 10 MHz", LALC),
 ]
 for i, (t, d, c) in enumerate(cards):
     x = M + i * 3.03
@@ -1249,13 +1250,13 @@ ecrl_rows = [
     ("1000 MHz", [59.59, 54.69, 51.12, 46.05, 41.40, 36.43]),
 ]
 lal_rows = [
-    ("10 MHz", [43.38, 44.05, 44.65, 46.04, 49.20, 56.09]),
-    ("20 MHz", [42.53, 45.11, 46.63, 47.62, 50.53, 57.10]),
-    ("50 MHz", [21.29, 23.97, 32.05, 49.92, 54.15, 60.16]),
-    ("100 MHz", [20.40, 21.62, 23.83, 30.61, 54.03, 64.20]),
-    ("200 MHz", [23.71, 23.87, 24.38, 26.95, 32.76, 61.47]),
-    ("500 MHz", [36.81, 36.86, 40.73, 34.87, 38.45, 42.11]),
-    ("1000 MHz", [61.70, 64.95, 70.74, 68.63, 71.14, 76.84]),
+    ("10 MHz", [1.27, 0.93, 0.67, 0.62, 0.75, 0.90]),
+    ("20 MHz", [1.70, 1.44, 1.22, 1.06, 1.06, 1.08]),
+    ("50 MHz", [3.61, 3.27, 2.94, 2.50, 2.34, 2.18]),
+    ("100 MHz", [6.88, 6.29, 5.73, 4.89, 4.53, 4.17]),
+    ("200 MHz", [13.01, 11.93, 10.96, 9.44, 8.75, 8.06]),
+    ("500 MHz", [28.81, 26.49, 24.59, 21.59, 20.06, 18.70]),
+    ("1000 MHz", [50.30, 46.10, 43.05, 38.42, 35.91, 33.95]),
 ]
 
 
@@ -1271,13 +1272,13 @@ def grid(x, title, data, color):
 
 
 grid(M, "ECRL inverter, slow-ramp input, alternating data", ecrl_rows, ECRLC)
-grid(M + 6.30, "2LAL quad-rail inverter", lal_rows, LALC)
+grid(M + 6.30, "2LAL quad-rail inverter (8-stage ring)", lal_rows, LALC)
 _, tf = textbox(s, M, 5.62, CW, 0.9)
-para(tf, "Note the difference in the width trend. ECRL improves with width at "
-         "high frequency and is flat at low frequency. 2LAL gets worse with "
-         "width at every frequency measured — its pass gates are not "
-         "resistance-limited in this range, so extra width buys nothing and "
-         "costs capacitance and leakage.", 13, BODY, first=True)
+para(tf, "Note the width trend. ECRL improves with width at high frequency and "
+         "is nearly flat at low frequency. 2LAL improves with width at every "
+         "frequency down to 50 MHz; at 20 and 10 MHz it bottoms out near "
+         "W = 1.5 µm and the widest devices cost more again.", 13, BODY,
+     first=True)
 para(tf, "All values are E_C, the average of the 0→1 and 1→0 cycles. "
          "In both families those two agreed to within the last printed digit, "
          "which is why no switching-activity correction was applied.",

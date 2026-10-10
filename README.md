@@ -15,7 +15,7 @@ ecrl/            ECRL deck in use, its sweep script and results CSV
 2lal/            2LAL 8-stage ring deck, its generator, sweep script and results CSV
   superseded/    the earlier open-chain 2LAL decks (energy bug, kept for reference)
 plots/           make_plots.py and the energy-vs-frequency plots it draws
-verification/    waveform-level checks: decoder, mutation test, reports, figures
+verification/    waveform checks, mutation test, energy-meter calibration, reports
 slides/          make_slides.py, the progress-review deck, and its figures
 CHECKS.md        how to re-derive every number and run every check
 ```
@@ -27,7 +27,7 @@ CHECKS.md        how to re-derive every number and run every check
 | `2lal/make_2lal_ring.py` | generates `2lal/2LAL_inverter_ring.sp` (edit this, not the deck) |
 | `2lal/run_2lal_sweep.sh` | same grid -> `2lal/2lal_inverter_sweep.csv` |
 | `plots/make_plots.py` | CSVs -> PNG plots and ngspice `.cir` plot decks |
-| `verification/verify_all.sh` | waveform dump + decode + mutation test |
+| `verification/verify_all.sh` | waveform decode, mutation test, energy-meter calibration and model fit |
 | `slides/make_slides.py` | builds `slides/ECRL_2LAL_Progress_Review.pptx` |
 
 ## Quick start
@@ -40,7 +40,7 @@ yours lives elsewhere):
     ecrl/run_ecrl_slowramp_sweep.sh        # ~3 min
     2lal/run_2lal_sweep.sh                 # ~5 min
     python3 plots/make_plots.py
-    verification/verify_all.sh            # ~3 min
+    verification/verify_all.sh            # ~4 min
 
 Every sweep point is checked (logic correct, circuit settled, simulator used
 the requested W and TPHASE) before its CSV row is written; a failure stops the
@@ -64,14 +64,9 @@ metered 8-stage ring.  Plots: `plots/ecrl_vs_2lal_W1.0.png`.
 
 ## Known issue
 
-`slides/` predates the 2LAL ring fix.  The slides that report 2LAL energy
-(2LAL vs frequency, the head-to-head plot, the numbers table, and the
-provenance example `2.16179e-14 J` on the verification slide) still quote
-the open-chain values (e.g. 44.05 fJ at 10 MHz, "ECRL wins 3.5x at low
-frequency"), and `slides/figs/2lal_energy_vs_ftr.png` and
-`slides/figs/ecrl_vs_2lal_W1.0*.png` are the old plots.  The CSVs and
-`plots/` above are current.  The waveform slides (ECRL, and 2LAL slide 19)
-are current.
+Slide 19 (naive vs quad-rail) still plots the superseded open-chain sweep,
+`2lal/superseded/2LAL_energy_sweep.csv`; the slide says so.  Every other
+2LAL energy on the slides comes from the ring CSV.
 
 The gnuplot scripts in `slides/figs/*.gp` point at the original author's
 scratch files (`/home/madhav/...`, `/tmp/...`), so they record how those
