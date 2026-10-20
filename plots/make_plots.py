@@ -11,7 +11,9 @@ For each CSV it emits:
 
 Plus one overlay PNG comparing the two families at a chosen width.
 
-Reads ../2lal/2lal_inverter_sweep.csv and ../ecrl/ecrl_slowramp_sweep.csv;
+Reads ../2lal/2lal_inverter_sweep.csv and ../ecrl/ecrl_slowramp_sweep.csv
+(width sweeps), and the four length / load-capacitance sweep CSVs
+(../2lal/2lal_{length,cap}_sweep.csv, ../ecrl/ecrl_{length,cap}_sweep.csv);
 writes everything into this directory, wherever it is run from.
 """
 import csv, subprocess, sys, os
@@ -116,6 +118,112 @@ plot {', '.join(plots)}
 """
     subprocess.run(["gnuplot"], input=gp, text=True, check=True)
 
+TPHASES = ["1", "2", "5", "10", "20", "50", "100"]
+
+def load_lc(path, key):
+    """-> {TPHASE: [(x, E_fJ), ...]} for a length / load sweep CSV, x = L (um)
+    or C_L (fF).  Points whose logic failed (status != ok) are left out: their
+    energy belongs to a gate that never reached the rails."""
+    d = {t: [] for t in TPHASES}
+    with open(path) as f:
+        for row in csv.DictReader(f):
+            if row["status"] == "ok":
+                d[row["Tphase_ns"]].append((float(row[key]), float(row["E_C_fJ"])))
+    return {t: sorted(v) for t, v in d.items()}
+
+def write_lc_png(data, out, title, xlab, xtics, xlo, xhi, guides=()):
+    """one line per TPHASE, log-log; guides = [(label, slope, x0, y0)] dashed
+    reference lines E ~ x^slope through (x0, y0)"""
+    dat = out + ".dat"
+    with open(dat, "w") as f:
+        for t in TPHASES:
+            f.write("# TPHASE = %s ns  (f_tr = %g MHz)\n" % (t, 1000.0 / float(t)))
+            for x, e in data[t]:
+                f.write("%g %.6g\n" % (x, e))
+            f.write("\n\n")
+    plots = ["'%s' index %d using 1:2 with linespoints lw 2 pt %d title 'TPHASE = %s ns'"
+             % (dat, i, i + 4, t) for i, t in enumerate(TPHASES)]
+    plots += ["%g*(x/%g)**%g with lines dt 2 lw 1.5 lc rgb '#777777' title '%s'"
+              % (y0, x0, s, lab) for lab, s, x0, y0 in guides]
+    gp = f"""
+set terminal pngcairo size 1100,760 font "Sans,11"
+set output '{out}'
+set title "{title}" font "Sans,12"
+set xlabel "{xlab}"
+set ylabel "Energy per operation = per clock = per transaction  (fJ)"
+set logscale xy
+set grid
+set key top left
+set xtics {xtics}
+set xrange [{xlo}:{xhi}]
+plot {', '.join(plots)}
+"""
+    subprocess.run(["gnuplot"], input=gp, text=True, check=True)
+
+def lc_overlay(sets, out, title, xlab, xtics, xlo, xhi, tphase="10"):
+    """ECRL vs 2LAL at one TPHASE"""
+    plots = []
+    for i, (label, data) in enumerate(sets):
+        dat = "%s.%d.dat" % (out, i)
+        with open(dat, "w") as f:
+            for x, e in data[tphase]:
+                f.write("%g %.6g\n" % (x, e))
+        plots.append("'%s' using 1:2 with linespoints lw 3 pt %d title '%s'" % (dat, i + 4, label))
+    gp = f"""
+set terminal pngcairo size 1100,760 font "Sans,11"
+set output '{out}'
+set title "{title}" font "Sans,12"
+set xlabel "{xlab}"
+set ylabel "Energy per operation  (fJ)"
+set logscale xy
+set grid
+set key top left
+set xtics {xtics}
+set xrange [{xlo}:{xhi}]
+plot {', '.join(plots)}
+"""
+    subprocess.run(["gnuplot"], input=gp, text=True, check=True)
+
+def lc_plots():
+    LX = ("Channel length  L  (um)", '("0.15" 0.15, "0.18" 0.18, "0.25" 0.25, "0.35" 0.35, '
+          '"0.5" 0.5, "0.75" 0.75, "1" 1, "1.5" 1.5, "2" 2)', 0.13, 2.3)
+    CX = ("Load capacitance per node  C_L  (fF)", '("5" 5, "10" 10, "25" 25, "50" 50, '
+          '"100" 100, "200" 200)', 4, 250)
+    lal_l = load_lc("../2lal/2lal_length_sweep.csv", "L_um")
+    ecrl_l = load_lc("../ecrl/ecrl_length_sweep.csv", "L_um")
+    lal_c = load_lc("../2lal/2lal_cap_sweep.csv", "CL_fF")
+    ecrl_c = load_lc("../ecrl/ecrl_cap_sweep.csv", "CL_fF")
+    note = "points where the logic fails are omitted"
+    write_lc_png(lal_l, "2lal_energy_vs_length.png",
+                 "2LAL quad-rail inverter (8-stage ring): energy vs channel length\\n"
+                 "sky130 tt, VDD 1.8 V, W = 1.0 um, CL = 25 fF per node; " + note, *LX)
+    write_lc_png(ecrl_l, "ecrl_energy_vs_length.png",
+                 "ECRL inverter (slow-ramp input): energy vs channel length\\n"
+                 "sky130 tt, VDD 1.8 V, W = 1.0 um, CL = 25 fF; " + note, *LX)
+    # reference slopes drawn through the TPHASE = 10 ns point at C_L = 25 fF
+    e10 = lambda d: dict(d["10"])[25.0]
+    write_lc_png(lal_c, "2lal_energy_vs_cap.png",
+                 "2LAL quad-rail inverter (8-stage ring): energy vs load capacitance\\n"
+                 "sky130 tt, VDD 1.8 V, W = 1.0 um, L = 0.15 um; " + note, *CX,
+                 guides=[("E ∝ C_L^2  (adiabatic RC loss)", 2, 25, e10(lal_c)),
+                         ("E ∝ C_L  (threshold loss)", 1, 25, e10(lal_c))])
+    write_lc_png(ecrl_c, "ecrl_energy_vs_cap.png",
+                 "ECRL inverter (slow-ramp input): energy vs load capacitance\\n"
+                 "sky130 tt, VDD 1.8 V, W = 1.0 um, L = 0.15 um; " + note, *CX,
+                 guides=[("E ∝ C_L^2  (adiabatic RC loss)", 2, 25, e10(ecrl_c)),
+                         ("E ∝ C_L  (threshold loss)", 1, 25, e10(ecrl_c))])
+    lc_overlay([("ECRL inverter (slow-ramp input)", ecrl_l), ("2LAL quad-rail inverter (ring)", lal_l)],
+               "ecrl_vs_2lal_length_T10.png",
+               "ECRL vs 2LAL vs channel length, TPHASE = 10 ns (f_tr = 100 MHz)\\n"
+               "W = 1.0 um, CL = 25 fF, alternating data", *LX)
+    lc_overlay([("ECRL inverter (slow-ramp input)", ecrl_c), ("2LAL quad-rail inverter (ring)", lal_c)],
+               "ecrl_vs_2lal_cap_T10.png",
+               "ECRL vs 2LAL vs load capacitance, TPHASE = 10 ns (f_tr = 100 MHz)\\n"
+               "W = 1.0 um, L = 0.15 um, alternating data", *CX)
+    for p in ("2lal_energy_vs_length", "ecrl_energy_vs_length", "2lal_energy_vs_cap",
+              "ecrl_energy_vs_cap", "ecrl_vs_2lal_length_T10", "ecrl_vs_2lal_cap_T10"):
+        print("wrote %s.png" % p)
+
 if __name__ == "__main__":
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     jobs = [
@@ -157,3 +265,6 @@ if __name__ == "__main__":
             "ECRL vs 2LAL inverter vs POWER-CLOCK frequency (the operation rate)\\nW = 1.0 um, L = 0.15 um, CL = 25 fF, alternating data",
             xlab=XL, xlo=2, xhi=330, xtics='("2.5" 2.5, "5" 5, "12.5" 12.5, "25" 25, "50" 50, "125" 125, "250" 250)')
     print("wrote ecrl_vs_2lal_W1.0_fclock.png")
+
+    # ---- channel-length and load-capacitance sweeps (W = 1.0 um) ----
+    lc_plots()

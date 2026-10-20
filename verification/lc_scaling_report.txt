@@ -1,0 +1,133 @@
+Channel-length and load-capacitance sweeps vs the adiabatic energy model  (python3 check_lc_scaling.py)
+
+2LAL ring, length sweep: W = 1.0 um, C_L = 25 fF
+     L_um      T=1ns      T=2ns      T=5ns     T=10ns     T=20ns     T=50ns    T=100ns
+     0.15    46.096     26.486     11.928      6.289      3.267      1.442      0.931 
+     0.18    56.684     33.279     15.675      8.481      4.442      1.827      0.924 
+     0.25    81.794     46.986     23.714     13.490      7.415      3.183      1.630 
+     0.35   113.647X    62.796     32.500     19.231     10.981      4.940      2.582 
+      0.5   148.294X    92.425     45.397     28.005     16.502      7.762      4.171 
+     0.75    75.590X   141.994X    68.221     43.033     26.453     12.958      7.199 
+      1.0    52.848X   174.400X    98.562     59.208     37.911     19.206     10.933 
+      1.5    49.316X    55.462X   175.434X   101.843     64.939     35.741     21.151 
+      2.0    49.085X    52.291X   148.062X   166.789X    97.198     56.666     34.869 
+  (fJ per operation = per clock period = per data transaction; X = logic fails, u = not settled; neither is fitted)
+
+ECRL, length sweep: W = 1.0 um, C_L = 25 fF
+     L_um      T=1ns      T=2ns      T=5ns     T=10ns     T=20ns     T=50ns    T=100ns
+     0.15    54.695     39.822     27.317     21.658     17.826     14.365     12.459 
+     0.18    59.892     45.413     31.754     25.433     21.122     17.196     15.004 
+     0.25    68.356     54.766     39.085     31.310     26.070     21.354     18.749 
+     0.35    73.209X    61.899     45.950     36.690     30.429     24.895     21.915 
+      0.5    75.657X    67.961     52.403     41.753     34.175     27.608     24.170 
+     0.75    70.793X    73.603X    59.437     48.159     38.812     30.738     26.644 
+      1.0    59.896X    75.639X    64.736     53.172     42.629     33.047     28.312 
+      1.5    43.056X    69.097X    72.284X    60.806     49.504     37.292     31.246 
+      2.0    33.827X    54.949X    76.914X    67.200     55.321     41.310     33.877 
+  (fJ per operation = per clock period = per data transaction; X = logic fails, u = not settled; neither is fitted)
+
+2LAL ring, load sweep: W = 1.0 um, L = 0.15 um
+    CL_fF      T=1ns      T=2ns      T=5ns     T=10ns     T=20ns     T=50ns    T=100ns
+        5     7.809      4.263      1.824      0.950      0.521      0.327      0.376 
+       10    14.746      8.190      3.558      1.850      0.978      0.511      0.466 
+       25    46.096     26.486     11.928      6.289      3.267      1.442      0.931 
+       50   134.815     75.395     35.431     19.102     10.023      4.234      2.341 
+      100   412.995X   240.952    112.925     62.982     33.818     14.333      7.492 
+      200   438.303X   787.469X   373.977    212.958    118.393     51.598     26.855 
+  (fJ per operation = per clock period = per data transaction; X = logic fails, u = not settled; neither is fitted)
+
+ECRL, load sweep: W = 1.0 um, L = 0.15 um
+    CL_fF      T=1ns      T=2ns      T=5ns     T=10ns     T=20ns     T=50ns    T=100ns
+        5     6.156      4.793      3.682      3.116      2.688      2.252      1.996 
+       10    15.228     11.406      8.395      6.955      5.914      4.900      4.304 
+       25    54.695     39.822     27.317     21.658     17.826     14.365     12.459 
+       50   140.426    107.085     70.880     53.898     42.829     33.375     28.477 
+      100   317.183X   277.979    191.621    140.541    107.086     79.781     66.439 
+      200   554.043X   631.853X   512.477    381.242    279.880    197.487    159.152 
+  (fJ per operation = per clock period = per data transaction; X = logic fails, u = not settled; neither is fitted)
+
+CAP, 2LAL: a = 4 * R * (C_L + C_p)^2 * VDD^2  ->  sqrt(a/4VDD^2) linear in C_L
+  C_L(fF)  points  a(fJ*ns)  tau(ns)  fit RMS   sqrt(a/4V^2)(1e-12 SI)
+        5      7       9.35   0.168   0.28 %     0.84946
+       10      7      18.53   0.211   0.60 %     1.19586
+       25      7      64.22   0.305   1.50 %     2.22604
+       50      7     196.16   0.364   3.54 %     3.89052
+      100      6     679.74   0.638   2.87 %     7.24218
+      200      5    2544.12   1.413   1.70 %    14.01091
+  line: R = 4544 ohm, C_p = 7.72 fF;  DC on-resistance of the TG = 4917 ohm
+  CAP 2LAL: sqrt(a) linear in C_L within 2 % at every load ........ PASS (worst 0.97 %)
+  CAP 2LAL: fitted R matches the TG DC on-resistance within 15 % ... PASS (4544 vs 4917 ohm, -7.6 %)
+  CAP 2LAL: parasitic C_p is a few fF (0 .. 15 fF) ................ PASS (7.72 fF)
+
+CAP, ECRL: fixed residue b (threshold loss) vs C_L, and slow-clock scaling
+  C_L(fF)  points  a(fJ*ns)  b(fJ)    b/C_L(fJ/fF)  fit RMS
+        5      7       6.86    2.456      0.491      1.88 %
+       10      7      16.81    5.324      0.532      1.87 %
+       25      7      67.52   15.130      0.605      1.67 %
+       50      7     221.26   33.184      0.664      1.14 %
+      100      6     797.54   71.246      0.712      0.56 %
+      200      5    2936.86  152.561      0.763      0.13 %
+  CAP ECRL: residue b grows at every step in C_L .................. PASS (2.5 < 5.3 < 15.1 < 33.2 < 71.2 < 152.6 fJ)
+  log-log slope dlnE/dlnC_L, C_L >= 25 fF (1 = linear in C, 2 = quadratic):
+    ECRL at TPHASE = 100 ns: 25->50 fF: 1.19, 50->100 fF: 1.22, 100->200 fF: 1.26
+  CAP ECRL: slow-clock energy close to linear in C_L (slope 1.0-1.5) ... PASS (slopes 1.19, 1.22, 1.26)
+    2LAL at TPHASE = 10 ns: 25->50 fF: 1.60, 50->100 fF: 1.72, 100->200 fF: 1.76
+  CAP 2LAL: energy steeper than ECRL, toward C^2 (slope 1.5-2.0) ... PASS (slopes 1.60, 1.72, 1.76)
+
+LENGTH, 2LAL: C_eff(L) = sqrt(a / (4 VDD^2 R(L))) with R(L) from cal_tg_ron.sp
+  L(um)  points  a(fJ*ns)  tau(ns)  fit RMS   R_TG(kohm)  C_eff(fF)
+   0.15      7      64.22   0.305   1.50 %       4.92     31.75
+   0.18      7      87.97   0.414   2.99 %       6.69     31.86
+   0.25      7     142.96   0.578   6.52 %      11.23     31.34
+   0.35      6     223.72   1.110   5.06 %      16.40     32.45
+    0.5      6     329.15   1.167   7.61 %      23.51     32.87
+   0.75      5     617.76   2.795   3.52 %      34.00     37.44
+    1.0      5     877.14   2.815   5.38 %      44.19     39.13
+    1.5      4    1816.83   5.374   3.06 %      65.15     46.39
+    2.0      3    3414.80  10.112   0.00 %      86.34     55.24  (3 points, 3 parameters: exact, not a test)
+  line: C_eff = 28.24 fF + 12.62 fF/um * L
+  For comparison (gate oxide Cox = 8.3 fF/um^2 from the model's toxe = 4.15 nm):
+    4 gates per node x Cox x W, if every gate were in inversion ....... 33 fF/um
+    2 gates per node x Cox x W: only these invert while the node swings 16.6 fF/um
+    the same 2 gates, inverted only above Vth (~0.55-0.95 V) ........ ~10 fF/um
+  The measured 12.6 fF/um sits between the last two, as it should.
+  LENGTH 2LAL: C_eff linear in L within 6 % at every length ....... PASS (worst 5.3 %)
+  LENGTH 2LAL: intercept = C_L + a few fF (25 .. 35 fF) ........... PASS (28.24 fF)
+
+LENGTH: threshold voltage vs L (cal_vth.sp, 100 nA * W/L, W = 1 um)
+  L(um)  nFET Vth(V)  pFET |Vth|(V)
+   0.15    0.680       0.730
+   0.18    0.661       0.779
+   0.25    0.642       0.839
+   0.35    0.605       0.887
+    0.5    0.592       0.909
+   0.75    0.563       0.929
+    1.0    0.551       0.937
+    1.5    0.539       0.947
+    2.0    0.533       0.953
+  The pFET |Vth| rises with L; the nFET Vth falls (sky130's halo implants give a
+  reverse short-channel effect).  ECRL's threshold loss comes from its pull-up pFET.
+
+LENGTH, ECRL: residue b and 1/T coefficient a vs L (fits need >= 5 points)
+  L(um)  points  a(fJ*ns)  b(fJ)    fit RMS
+   0.15      7      67.52   15.130   1.67 %
+   0.18      7      78.65   17.952   1.39 %
+   0.25      7     104.89   21.655   0.97 %
+   0.35      6     145.30   24.109   0.56 %
+    0.5      6     192.06   25.838   0.39 %
+   0.75      5     287.65   26.744   0.08 %
+    1.0      5     367.72   27.579   0.07 %
+    1.5      4  (too few passing points to fit)
+    2.0      4  (too few passing points to fit)
+  LENGTH ECRL: threshold residue b grows with L, as the pFET |Vth| does ... PASS (15.1 < 18.0 < 21.7 < 24.1 < 25.8 < 26.7 < 27.6 fJ)
+
+LITERATURE: 2LAL shift register, Frank et al., ICRC 2020 (Sandia SAND talk, slide 19):
+  6.9 aJ per cycle per FET at f = 1 MHz, CL = 10 fF, 50 % activity, MESA 180 nm, W = 480 nm
+  (37 aJ in MESA 350 nm, W = 800 nm).  This ring at the same point in SKY130:
+  TPHASE = 250 ns, CL = 10 fF, W = 0.48 um, L = 0.18 um.  A quad-rail column has 16 FETs
+  and exactly one of its two sub-chains pulses per cycle: 50 % activity per sub-chain.
+  E per column = 0.1297 fJ -> 8.11 aJ per FET per cycle (1.17x the published 6.9 aJ); logic checks failed: 0/96
+  LITERATURE: 2LAL logic correct at the published operating point ... PASS (96/96 checks)
+  LITERATURE: per-FET energy within 2x of Frank et al.'s 6.9 aJ ... PASS (8.11 aJ, 1.17x)
+
+OVERALL: PASS  (11/11 checks)

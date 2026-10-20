@@ -132,8 +132,12 @@ w(f"""* ========================================================================
 .param VDD    = 1.8
 .param WN     = 1.0         ; nFET width, MICRONS   ; SWEEPVAR
 .param WP     = 1.0         ; pFET width, MICRONS   ; SWEEPVAR
-.param L      = 0.15        ; channel length, MICRONS
-.param CL     = 25f         ; load per dual-rail node (matches ECRL's CL)
+.param L      = 0.15        ; channel length, MICRONS   ; SWEEPVAR
+.param LDIF   = 0.15        ; S/D diffusion length for as/ad/ps/pd, MICRONS.
+*                             Kept separate from L: the diffusion does not grow
+*                             when the channel gets longer.  At L = LDIF = 0.15
+*                             the geometry is identical to the earlier decks.
+.param CL     = 25f         ; load per dual-rail node (matches ECRL's CL) ; SWEEPVAR
 
 .param TPHASE = 10n                                 ; SWEEPVAR
 .param TRAIL  = '4*TPHASE'  ; one full trapezoid    (== ECRL Tclock)
@@ -163,9 +167,9 @@ Vp3 p3 0 PULSE({{VDD}} 0     {{TPHASE}} {{TPHASE}} {{TPHASE}} {{TPHASE}} {{TRAIL
 * Transmission gate: conducts s->d when the dual-rail control (gn,gp) is TRUE.
 .subckt TG d gn gp s vnb vpb
 xN d gn s vnb sky130_fd_pr__nfet_01v8 w={{WN}} l={{L}}
-+ as='WN*L*1.77' ad='WN*L*1.77' ps='(WN+L)*2.4' pd='(WN+L)*2.4'
++ as='WN*LDIF*1.77' ad='WN*LDIF*1.77' ps='(WN+LDIF)*2.4' pd='(WN+LDIF)*2.4'
 xP d gp s vpb sky130_fd_pr__pfet_01v8 w={{WP}} l={{L}}
-+ as='WP*L*1.77' ad='WP*L*1.77' ps='(WP+L)*2.4' pd='(WP+L)*2.4'
++ as='WP*LDIF*1.77' ad='WP*LDIF*1.77' ps='(WP+LDIF)*2.4' pd='(WP+LDIF)*2.4'
 .ends TG
 
 * The 2LAL delay element (Fig 2c / 4lc PHAS2), 8 FETs:

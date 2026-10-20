@@ -176,6 +176,60 @@ Read a result:
     column -t -s, 2lal/2lal_inverter_sweep.csv
     column -t -s, ecrl/ecrl_slowramp_sweep.csv
 
+### 4b. Channel-length and load-capacitance sweeps
+
+    2lal/run_2lal_lc_sweep.sh length   # -> 2lal/2lal_length_sweep.csv
+    2lal/run_2lal_lc_sweep.sh cap      # -> 2lal/2lal_cap_sweep.csv
+    ecrl/run_ecrl_lc_sweep.sh length   # -> ecrl/ecrl_length_sweep.csv
+    ecrl/run_ecrl_lc_sweep.sh cap      # -> ecrl/ecrl_cap_sweep.csv
+
+(The four are independent; all four in parallel take about 8 min.)
+
+| sweep | swept | held fixed | TPHASE |
+|---|---|---|---|
+| length | L = 0.15, 0.18, 0.25, 0.35, 0.5, 0.75, 1.0, 1.5, 2.0 um | W = 1.0 um, CL = 25 fF | 1 .. 100 ns |
+| load | CL = 5, 10, 25, 50, 100, 200 fF | W = 1.0 um, L = 0.15 um | 1 .. 100 ns |
+
+The L grid includes sky130's characterised lengths (0.15, 0.18, 0.25, 0.5, 1,
+2 um, where the model bins meet).  W = 1.0 um has model bins at every length.
+
+**Why W = 1.0 um and L = 0.15 um are the fixed points.**
+* *They are the anchor of every earlier result.*  Both sweeps pass through
+  W = 1.0, L = 0.15, CL = 25 fF, and each script checks at the end that it
+  reproduces the width sweep there (it does, to every printed digit).  A
+  change in a deck or the models therefore shows up as a failed anchor.
+* *A "formula" width does not stay optimal across a length sweep.*  The
+  adiabatic term is a ~ R * (CL + k*W)^2 with R ~ 1/W, minimised at
+  W* = CL / k (Fischer et al. 2003/2004: widening pays only while the
+  transistor's own capacitance stays below the load).  At L = 0.15 um, the
+  width sweep gives k = 7.1 fF/um, so W* = 3.5 um; but the gate part of k grows
+  with L (12.6 fF/um per um of L, from the length sweep), so
+  k = 7.1 + 12.6*(L - 0.15) and W* falls to about 1.4 um at L = 1 um and
+  0.8 um at L = 2 um.  Fixing W at W*(0.15) = 3.5 um
+  would make the long-L points mostly a measurement of gate capacitance.
+* *The extremes are worse.*  Minimum width (0.42 um) maximises R, so the
+  long-L points fail logic at even more speeds, and sits next to narrow-width
+  bin edges.  The largest width makes the gate load W*L dominate CL.
+* *L = 0.15 um for the load sweep* is the minimum length, which the length
+  sweep shows is the lowest-energy length at every TPHASE except 100 ns, where
+  0.18 um is 0.8 % lower (less leakage).
+
+**A point whose logic fails is recorded, not fatal.**  Long channels and big
+loads cannot reach the rails at the fastest clocks; those rows get
+`status=logic_fail` (or `unsettled`) and are left out of fits and plots.
+Everything else still stops the sweep: a substitution that did not land, an
+ngspice error or warning, a missing `.meas`, or W, L or TPHASE read back from
+the simulator differing from the request (`show m : w l` on every FET).
+
+**Diffusion geometry no longer follows L.**  The 2LAL deck used to set
+`as='WN*L*1.77'`, so a longer channel also grew the source/drain junctions.
+`make_2lal_ring.py` now uses a separate `LDIF = 0.15` for as/ad/ps/pd.  At
+L = 0.15 the deck is numerically identical (the width sweep and every
+report are unchanged).  `verification/cal_tg_ron.sp` got the same fix.
+
+Energy per operation = energy per clock (rail) period per gate (column) =
+energy per data transaction, because the data alternates every period.
+
 ---
 
 ## 5. Check the inverters at the waveform level
@@ -246,11 +300,54 @@ same fit on it and *requires* every width to be rejected; today all six are
 its thresholds let that data pass, the check `open-chain 2LAL rejected at
 every width` fails.
 
+### 5c. Check the length and load sweeps against the energy model
+
+    verification/run_calibration.sh            # also measures R_TG(L) and Vth(L)
+    python3 verification/check_lc_scaling.py   # -> lc_scaling_report.txt, exit 1 on failure
+
+The adiabatic loss of a node swing through resistance R is
+a = n * R * C_eff^2 * VDD^2 per 1/T (Fischer et al., Adv. Radio Sci. 2, 221,
+2004, eq. 1), with n = 4 node swings per 2LAL operation.  That predicts:
+
+* **Load, 2LAL.**  sqrt(a / 4 VDD^2) = sqrt(R) * (CL + Cp) is a straight line in
+  CL.  Measured: linear within 1.0 % at all six loads; its slope gives
+  R = 4.54 kohm against the transmission gate's DC on-resistance of 4.92 kohm
+  (-8 %), its intercept Cp = 7.7 fF.  Energy per doubling of CL approaches
+  x4 (log-log slope 1.6-1.8 at TPHASE = 10 ns).
+* **Load, ECRL.**  The fixed threshold residue (CL*Vth^2/2, eq. 2 of the same
+  paper) grows with CL, 2.5 -> 153 fJ, and the slow-clock energy is close to
+  linear in CL (log-log slope 1.2-1.3 at 100 ns).
+* **Length, 2LAL.**  With R(L) measured at each length (`cal_tg_ron.sp`),
+  C_eff(L) = sqrt(a / (4 VDD^2 R(L))) = 28.2 fF + 12.6 fF/um * L, linear within
+  5.3 %: the 25 fF load plus junctions, plus gate charge growing with W*L.
+  12.6 fF/um lies between two estimates from the oxide (Cox = 8.3 fF/um^2):
+  2 gates in inversion per node (16.6) and the same gates inverted only above
+  Vth (~10).  Four full gates would be 33.
+* **Length, ECRL.**  The threshold residue grows with L, 15.1 -> 27.6 fJ
+  (L = 0.15 -> 1 um), as the pull-up pFET's |Vth| does (0.73 -> 0.94 V,
+  `cal_vth.sp`).  The nFET's Vth goes the other way (0.68 -> 0.55 V,
+  sky130's reverse short-channel effect).
+* **A published 2LAL number.**  Frank et al. (ICRC 2020, Sandia talk SAND,
+  slide 19) report 6.9 aJ per cycle per FET for a 2LAL shift register at
+  f = 1 MHz, CL = 10 fF, 50 % activity, W = 480 nm in Sandia's 180 nm process
+  (37 aJ in their 350 nm process).  `run_calibration.sh` runs this ring at the
+  same point in SKY130 (TPHASE = 250 ns, W = 0.48 um, L = 0.18 um): all 96
+  logic checks pass and it dissipates 8.11 aJ per FET per cycle, 1.17x the
+  published value.  A quad-rail column has 16 FETs and one of its two
+  sub-chains pulses per cycle, which is 50 % activity per sub-chain.
+
 ---
 
 ## 6. Make and view the graphs
 
-    python3 plots/make_plots.py      # regenerates all 6 PNGs and all 4 .cir decks in plots/
+    python3 plots/make_plots.py      # regenerates every PNG and the 4 .cir decks in plots/
+
+    xdg-open plots/2lal_energy_vs_length.png      # length sweep, one line per TPHASE
+    xdg-open plots/ecrl_energy_vs_length.png
+    xdg-open plots/2lal_energy_vs_cap.png         # load sweep, with E ~ CL and E ~ CL^2 guides
+    xdg-open plots/ecrl_energy_vs_cap.png
+    xdg-open plots/ecrl_vs_2lal_length_T10.png    # the two families at TPHASE = 10 ns
+    xdg-open plots/ecrl_vs_2lal_cap_T10.png
 
     xdg-open plots/ecrl_vs_2lal_W1.0.png          # x-axis = transition freq 1/TPHASE
     xdg-open plots/ecrl_vs_2lal_W1.0_fclock.png   # x-axis = power-clock freq 1/(4*TPHASE)
