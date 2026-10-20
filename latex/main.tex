@@ -3,22 +3,23 @@
 %  Under Frequency, Transition-Time and Circuit-Parameter Variations
 %
 %  Build:   latexmk -pdf main.tex        (or pdflatex -> bibtex -> pdflatex x2)
-%  Layout:  main.tex, refs.bib, figs/  (gnuplot/ngspice outputs as PDF)
+%  Figures are read straight from the repository (../plots,
+%  ../verification/figures, ../slides/figs); build from this directory.
 %
 %  Draft aids (turn off for submission: set \draftfalse below):
-%    \tbd{...}    red   -> a value/result that must come from simulation
-%    \guide{...}  blue  -> instruction carried over from the MS template
-%    \simfig{w}{file}   -> includes file if it exists, else a labelled box,
-%                          so the paper always compiles while sweeps run
+%    \tbd{...}    red   -> a value that has not been simulated or checked
+%    \guide{...}  blue  -> a note to the authors
+%    \simfig{w}{file}   -> includes file if it exists, else a labelled box
 %
 %  DATA SOURCES (github.com/Sairam-Kesanapalli/Adiabatic_sweep):
-%    ECRL : ecrl_exp1/ecrl_slowramp_sweep.csv            (as committed)
-%    2LAL : 2lal_inverter_sweep_terminated.csv           (deck with the
-%           chain-termination fix, 2lal_termination_fix.patch). The committed
-%           2lal_inverter_sweep.csv is superseded: its stage-4 energy is
-%           corrupted by the unterminated chain end (see Sec. III-D).
-%    CMOS : no deck in the repo -> every CMOS number is \tbd or labelled
-%           as the analytical 1/2 C V^2 reference.
+%    ECRL  : ecrl/ecrl_slowramp_sweep.csv, ecrl/ecrl_{length,cap}_sweep.csv
+%    2LAL  : 2lal/2lal_inverter_sweep.csv (8-stage ring),
+%            2lal/2lal_{length,cap}_sweep.csv
+%    CMOS  : verification/cal_cmos.sp -> verification/calibration_report.txt
+%            (delay: tphl/tplh in verification/data/calibration/cmos_CL25f_T40n.out)
+%    Checks: verification/{waveform,mutation,calibration,lc_scaling}_report.txt
+%    Returned/delivered energy: one-off runs of the same decks with the
+%            positive part of each clock's power integrated separately.
 % =====================================================================
 \documentclass[conference]{IEEEtran}
 \IEEEoverridecommandlockouts
@@ -88,29 +89,28 @@ Indian Institute of Information Technology Dharwad, Karnataka, India\\
 
 % =====================================================================
 \begin{abstract}
-Conventional CMOS logic dissipates energy on every charge and discharge of its
-capacitive load. Adiabatic logic reduces this loss by charging nodes from a
-ramped power clock and returning the stored charge to it. This work compares
-Efficient Charge Recovery Logic (ECRL) and Two-Level Adiabatic Logic (2LAL)
-inverters in the SkyWater SKY130 process under one simulation and measurement
-framework: ngspice, $V_{\mathrm{DD}}=1.8$~V, $L=0.15$~\textmu m, a 25~fF load on
-every metered node, alternating data, and energy defined as the integral of
-power-clock power over one clock period. Transition time is swept from 1 to
-100~ns (10--1000~MHz transition frequency) and device width from 0.84 to
-3.0~\textmu m. Across the sweep, ECRL energy per operation ranges from
-11.55 to 59.59~fJ and 2LAL from 0.55 to 50.53~fJ. At $W=1$~\textmu m, 2LAL
-dissipates 1.19$\times$ less than ECRL at 1~ns and 14.6$\times$ less at
-100~ns. 2LAL energy falls approximately as $1/T$ (log--log slope $-0.89$ to
-$-0.99$ between 10 and 50~ns), whereas ECRL flattens towards a
-threshold-related residue. Channel-length (0.15--2~\textmu m) and load
-(5--200~fF) sweeps confirm the adiabatic model: 2LAL energy follows
-$R(\CL+C_p)^2$ with an $R$ within 8\% of the measured gate resistance, and at
-a published 2LAL operating point the SKY130 ring is within 1.17$\times$ of the
-reported per-FET energy. Two measurement defects that change these
-conclusions, a data-static metering window and an unterminated 2LAL chain,
-are identified and corrected.
-\guide{Add the CMOS reduction figure once a CMOS deck is simulated; the analytical
-$\tfrac12 C V^2$ reference is 40.5~fJ per transition.}
+Static CMOS dissipates energy on every charge and discharge of its load.
+Adiabatic logic charges nodes from a ramped power clock and returns most of
+the stored charge to it. We compare an Efficient Charge Recovery Logic (ECRL)
+inverter and a Two-Level Adiabatic Logic (2LAL) inverter in the SkyWater
+SKY130 process with one simulator (ngspice), one supply (1.8~V), one load
+(25~fF per node), alternating data and one energy definition: the net energy
+drawn from the power clocks per clock period. The ramp time is swept from 1 to
+100~ns, and the device width, channel length and load capacitance are swept
+one at a time. Over the width sweep, ECRL dissipates 11.55 to 59.59~fJ per
+operation and 2LAL 0.62 to 50.30~fJ. At $W=1$~\textmu m, 2LAL dissipates
+1.19$\times$ less than ECRL at a 1~ns ramp and 13.4$\times$ less at 100~ns; a
+simulated static CMOS inverter with the same load dissipates 43.8~fJ per
+transition. 2LAL energy falls nearly as $1/T$ (log--log slope $-0.84$ to
+$-0.96$ between 10 and 50~ns), while ECRL levels off at a threshold-voltage
+residue of about 15~fJ. In the load sweep, 2LAL energy follows
+$R(\CL+C_p)^2$ with an $R$ within 8\% of the measured transmission-gate
+resistance; at a published 2LAL operating point, the SKY130 circuit dissipates
+1.17$\times$ the reported energy per transistor. The saving costs speed: the
+energy-delay product of static CMOS is 9$\times$ lower than the best adiabatic
+value in the sweep. Two testbench defects that
+reversed conclusions, a metering window without a data transition and an
+unterminated 2LAL chain, are described and corrected.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -123,41 +123,51 @@ ngspice, energy-delay product.
 \label{sec:intro}
 
 \subsection{Background}
-\guide{Cover: growth of low-power VLSI; dynamic switching energy; CMOS
-charging/discharging; need for energy-efficient logic. Cite 5--7 references
-(more or fewer as needed).}
-Dynamic switching energy remains a dominant component of power in digital CMOS
-\cite{chandrakasan1992,rabaey2003}. \tbd[: expand].
+In static CMOS, every charge of a load capacitance $\CL$ from a constant supply
+dissipates $\tfrac12\CL\VDD^2$ in the pull-up network, and every discharge
+dissipates the stored $\tfrac12\CL\VDD^2$ in the pull-down network, regardless
+of how slowly the gate switches \cite{chandrakasan1992,rabaey2003}. Lowering
+$\VDD$ reduces this energy, but speed and noise margin limit how far.
+Landauer showed that erasing one bit costs at least $kT\ln2$
+\cite{landauer1961}, and Bennett showed that computation can in principle
+be carried out without erasure \cite{bennett1973}. The $\tfrac12\CL\VDD^2$
+per transition of CMOS is therefore a property of the circuit style, not a
+limit of computation.
 
 \subsection{Adiabatic Logic}
-\guide{Concept of adiabatic switching; gradual charging; energy recovery;
-effect of transition time. Include equations and define every variable.}
-Adiabatic switching charges a load through a resistive path with a slowly
-ramping supply, so that the voltage across the switching device stays small
-throughout the transition \cite{koller1992,athas1994}. The dissipated energy
-then scales with the ratio of the circuit time constant to the ramp time
-(\cref{sec:adiabatic}), and the charge stored on the load can be returned to
-the supply during the falling ramp.
+Adiabatic switching charges a node through a resistive path from a supply that
+ramps slowly, so that the voltage across the switch stays small throughout
+the transition \cite{koller1992,athas1994}. The dissipated energy then scales
+with the ratio of the circuit time constant to the ramp time
+(\cref{sec:adiabatic}), and the stored charge can be returned to the supply on
+the falling ramp. Families differ in how completely they meet the two rules
+of adiabatic switching: never turn a switch on while a voltage is across it,
+and never turn it off while current flows through it. Quasi-adiabatic
+families such as ECRL break the first rule once per cycle, when a transistor
+turns on with roughly a threshold voltage across it, and so lose a fixed
+residue. Fully adiabatic families such as 2LAL obey both rules and are
+limited only by resistance and leakage \cite{frank2020icrc}.
 
 \subsection{ECRL}
 \label{sec:ecrl}
 ECRL \cite{moon1996} uses four transistors and no DC supply: a cross-coupled
-PMOS pair whose sources sit on the power clock $\phi$, and two NMOS pull-downs
-driven by the differential input (\cref{fig:ecrl}). With $\mathit{in}$ high,
-N2 holds $\mathit{out}$ at ground, P1 (gate on $\mathit{out}$) conducts, and
-$\outb$ follows $\phi$ up and back down; the charge on $\outb$ returns to the
-clock through P1 on the falling ramp. Thus $\mathit{out}=\overline{\mathit{in}}$
-and $\outb=\mathit{in}$, and exactly one output pulses every cycle whatever the
-data. The clock is a trapezoid with four equal intervals (wait, evaluate, hold,
-recover); the input may change only during wait. A single gate uses one
-clock phase; a cascade places successive stages on successive phases.
+PMOS pair whose sources sit on the power clock $\phi$, and two NMOS
+pull-downs driven by the differential input (\cref{fig:ecrl}). With
+$\mathit{in}$ high, N2 holds $\mathit{out}$ at ground, so P1, whose gate is
+$\mathit{out}$, conducts, and $\outb$ follows $\phi$ up and back down; the
+charge on $\outb$ returns to the clock through P1 on the falling ramp. Thus
+$\mathit{out}=\overline{\mathit{in}}$ and $\outb=\mathit{in}$, and exactly one
+output pulses in every cycle, whatever the data. The clock is a trapezoid with
+four equal intervals (wait, evaluate, hold, recover), and the input may change
+only during wait. A single gate uses one clock phase; a cascade places
+successive stages on successive phases.
 
-Its advantages are the small cell (4 FETs) and single-rail clocking per gate.
-Its main limitation is incomplete recovery: on the falling ramp P1 stops
-conducting once $\outb$ is within about $|V_{\mathrm{th},p}|$ of its gate, so
-$\outb$ is stranded at a residual voltage (0.53~V at $\Tph=10$~ns and
-0.42~V at 100~ns in our simulations). When the data changes, the NMOS dumps
-that charge to ground, which is not recoverable (\cref{eq:ecrl}).
+ECRL needs only four transistors and one clock per gate. Its main loss is
+incomplete recovery: on the falling ramp, P1 stops conducting once $\outb$ has
+fallen to roughly $|V_{\mathrm{th},p}|$ above its gate, which is at ground, so
+$\outb$ is left at a residual voltage (0.53~V at a 10~ns ramp and 0.42~V at 100~ns in our
+simulations). When the data changes, the NMOS discharges that residue to
+ground, and the energy is lost (\cref{eq:ecrl}).
 
 \begin{figure}[!t]
 \centering
@@ -186,8 +196,8 @@ that charge to ground, which is not recoverable (\cref{eq:ecrl}).
   \node[font=\scriptsize] at ($(N2.center)+(0.9,0)$) {N2};
 \end{circuitikz}
 \caption{ECRL inverter as simulated (device names follow the netlist:
-P1\,=\,XMP1, N1\,=\,XMN1). $\mathit{out}=\overline{\mathit{in}}$; a 25~fF
-load on each output is omitted from the drawing.}
+P1\,=\,XMP1, N1\,=\,XMN1). $\mathit{out}=\overline{\mathit{in}}$; the 25~fF
+load on each output is not drawn.}
 \label{fig:ecrl}
 \end{figure}
 
@@ -197,62 +207,67 @@ load on each output is omitted from the drawing.}
 from CMOS transmission gates (TGs) and clocked by four trapezoidal rails
 $\phi_0$--$\phi_3$, each one phase later than the last; stage $n$ is clocked
 one phase after stage $n-1$. Data is dual-rail: a pair $(T,C)$ rests at
-FALSE $=(0,V_{\mathrm{DD}})$, and TRUE is a pulse on $T$ (from $\phi_t$) while
-$C$ is pulled down by the antiphase rail $\phi_{t+2}$. A logic 0 is the
-\emph{absence} of a pulse; encoding it as a pulse on $C$ makes the pass-gate
-pFET conduct while $\phi_t$ is high and produces spurious ones downstream.
+FALSE $=(0,\VDD)$, and TRUE is a pulse on $T$ from $\phi_t$ while $C$ is
+pulled down by the antiphase rail $\phi_{t+2}$. A logic 0 is the
+\emph{absence} of a pulse. Encoding it as a pulse on $C$ instead makes the
+pass-gate pFET conduct while $\phi_t$ is high and produces spurious ones
+downstream.
 
-The working cell has eight transistors (\cref{fig:2lal}): a forward pair of
-TGs that drives the output pair, and a reverse pair that restores the previous
+Each cell has eight transistors (\cref{fig:2lal}): a forward pair of TGs
+that drives the output pair, and a reverse pair that restores the previous
 stage's nodes (from $\phi_{t-1}$ and $\phi_{t+1}$) once this stage's output is
-valid. A forward-only four-transistor stage cannot pull its own output back
-down and latches high. Inversion cannot be done by crossing the two rails,
-because the lopsided rest state $(0,V_{\mathrm{DD}})$ becomes $(V_{\mathrm{DD}},0)$,
-a permanent TRUE. It instead uses quad-rail data: two dual-rail sub-chains
-carrying $A$ and $\overline{A}$, exchanged at every stage. This costs no
-transistors per cell but doubles the datapath, so one inverter column is
-16~FETs. Because one sub-chain always carries a TRUE, a column pulses every
-period, like an ECRL gate.
+valid. Our cell follows the PHAS2 cell of DeBenedictis's 4lc testbench
+\cite{debenedictis4lc}. A four-transistor stage with only the forward pair
+cannot pull its own output back down and latches high. Inversion cannot be
+done by crossing the two rails either, because the rest state
+$(0,\VDD)$ then becomes $(\VDD,0)$, a permanent TRUE. The inverter instead
+uses quad-rail data: two dual-rail sub-chains carry $A$ and $\overline{A}$
+and are exchanged at every stage. The exchange costs no transistors, but it
+doubles the datapath, so one inverter column has 16 transistors. Because one
+sub-chain always carries a TRUE, a column pulses once in every period, as an
+ECRL gate does.
 
-Advantages: every switch obeys the adiabatic rules, so there is no threshold
-residue and dissipation keeps falling with ramp time. Limitations: four clock
-rails, 4$\times$ the devices of ECRL per inverter, and data-dependent floating
-nodes whose correctness depends on the neighbouring stages (\cref{sec:termination}).
-\guide{The cell is reconstructed from Frank's slides, a DeBenedictis report and
-the 4lc PHAS2 cell; verify against the primary source if obtainable.}
+Every switch in 2LAL obeys both adiabatic rules, so there is no threshold
+residue and dissipation keeps falling as the ramp slows. The costs are four
+clock rails, four times the transistors of ECRL per inverter, and nodes that
+float when FALSE and depend on the neighbouring stages to stay correct
+(\cref{sec:termination}).
 
 \begin{figure}[!t]
 \centering
-\simfig{0.9\columnwidth}{figs/fig_2lal_cell.png}
-\caption{2LAL stage (4 TGs, 8 FETs): forward pair drives the output pair,
-reverse pair restores the previous stage. Copy
-\texttt{slides\_figs/fig\_2lal\_cell.png} to \texttt{figs/}.}
+\simfig{0.9\columnwidth}{../slides/figs/fig_2lal_cell.png}
+\caption{2LAL stage (four TGs, eight transistors): the forward pair drives the
+output pair, and the reverse pair restores the previous stage.}
 \label{fig:2lal}
 \end{figure}
 
 \subsection{Research Gap}
-ECRL was introduced with an energy-versus-frequency evaluation in a 1~\textmu m,
-5~V process \cite{moon1996}, and 2LAL has been developed as a fully adiabatic
-family by Frank and co-workers \cite{frank2003mistakes,frank2020icrc}. Those
-results come from different processes, supply voltages, loads and energy
-definitions, so they cannot be compared number-for-number, and an energy value
-is meaningful only when the operation it covers is stated.
-This work implements both families in one open PDK (SKY130) and one simulator,
-and compares them under seven matched conditions: technology and corner,
-supply, load, device geometry, time base, energy definition and switching
-activity. It also reports two measurement defects found along the way,
-because each one changed the comparison.
-\guide{Add 2--3 citations of recent SKY130 or cross-family adiabatic studies
-here; do not claim that no such comparison exists.}
+ECRL was introduced with an energy-versus-frequency evaluation
+\cite{moon1996}, and 2LAL has been developed as a fully adiabatic family by
+Frank and co-workers \cite{frank2003mistakes,frank2020icrc}, who have
+reported simulated shift-register energies in Sandia's 180 and 350~nm
+processes \cite{frank2020talk}. These results use
+different processes, supplies, loads and energy definitions, so they cannot be
+compared number for number, and an energy figure means little unless the
+operation it covers is stated. We are not aware of a published simulation of
+either family in SKY130; DeBenedictis's ngspice shift-register decks include a
+SKY130 model option but report no comparison with ECRL \cite{debenedictis4lc}.
+This work implements both families in one open PDK and one simulator, and
+compares them under seven matched conditions: technology and corner, supply,
+load, device width and length, time base, energy definition and switching
+activity.
 
 \subsection{Objectives}
 \begin{enumerate}
-  \item Implement and functionally validate CMOS, ECRL and 2LAL inverters in SKY130.
-  \item Quantify the effect of frequency and power-clock transition time on energy.
-  \item Quantify the effect of transistor width (load capacitance: \tbd, not yet swept).
-  \item Compare energy, average power, delay and energy-delay product (EDP).
-  \item Identify operating regions in which each adiabatic family reduces energy
-        relative to CMOS.
+  \item Implement ECRL and 2LAL inverters in SKY130 and verify their logic
+        at every simulated point.
+  \item Validate the energy measurement against static CMOS and against an
+        exact adiabatic case.
+  \item Measure the effect of ramp time (frequency), transistor width,
+        channel length and load capacitance on energy per operation.
+  \item Compare energy, average power, latency and energy-delay product (EDP)
+        with a simulated static CMOS inverter, and identify where each
+        adiabatic family uses less energy than CMOS.
 \end{enumerate}
 
 % =====================================================================
@@ -260,12 +275,12 @@ here; do not claim that no such comparison exists.}
 \label{sec:theory}
 
 \subsection{CMOS Switching Energy}
-Charging a load $\CL$ from $0$ to $\VDD$ through a constant supply draws charge
-$\CL\VDD$ and therefore energy $\CL\VDD^2$ from the supply. Half of it is stored
-on the load; the other half is dissipated in the pull-up network, independent
-of its resistance. The stored $\tfrac12\CL\VDD^2$ is dissipated in the
-pull-down network on discharge \cite{rabaey2003}. With switching activity
-$\alpha_{\mathrm{sw}}$ and frequency $f$,
+Charging a load $\CL$ from $0$ to $\VDD$ from a constant supply draws charge
+$\CL\VDD$ and therefore energy $\CL\VDD^2$ from the supply. Half is stored on
+the load and half is dissipated in the pull-up network, whatever its
+resistance; the stored half is dissipated in the pull-down network on
+discharge \cite{rabaey2003}. With switching activity $\alpha_{\mathrm{sw}}$
+(full charge--discharge cycles per clock) and clock frequency $f$,
 \begin{equation}
   E_{\mathrm{CMOS}} = \alpha_{\mathrm{sw}}\,\CL\VDD^2, \qquad
   P_{\mathrm{dyn}} = \alpha_{\mathrm{sw}}\,\CL\VDD^2 f .
@@ -274,47 +289,49 @@ $\alpha_{\mathrm{sw}}$ and frequency $f$,
 
 \subsection{Adiabatic Charging}
 \label{sec:adiabatic}
-If the same load is charged through an on-resistance $R$ by a supply that ramps
-linearly from $0$ to $\VDD$ in time $T$, the charging current is approximately
+If the same load is charged through an on-resistance $R$ from a supply that
+ramps linearly from $0$ to $\VDD$ in time $T$, the charging current is about
 $\CL\VDD/T$, and for $T \gg R\CL$ the dissipated energy is
-\cite{athas1994}
+\cite{athas1994,fischer2004}
 \begin{equation}
   E_{\mathrm{ad}} \approx \frac{R\CL}{T}\,\CL\VDD^2 .
   \label{eq:adiabatic}
 \end{equation}
-This is per transition; a full charge--discharge cycle costs twice this. The
-loss falls as $1/T$, and the stored energy is returned to the supply when the
-ramp falls. $R$ is the effective on-resistance of the charging path, $T$ the
-ramp (transition) time, and $\CL$ the switched capacitance.
+This is per transition; a full charge--discharge cycle costs twice as much.
+The loss falls as $1/T$, and the stored energy returns to the supply on the
+falling ramp. When $T$ is not much longer than $R\CL$, the exact loss of one
+linear ramp is $\CL\VDD^2\,g(T,\tau)$ with $\tau=R\CL$ and
+$g=(\tau/T)\,[1-(\tau/T)(1-e^{-T/\tau})]$, which tends to $\tau/T$ for
+$T\gg\tau$.
 
 For quasi-adiabatic families such as ECRL, the recovery transistor turns off
-once the voltage across it drops below its threshold, leaving a residue that
-does not scale with $T$ \cite{moon1996}:
+once its gate--source voltage falls below its threshold, which leaves a
+residue that does not scale with $T$ \cite{moon1996,fischer2004}:
 \begin{equation}
   E_{\mathrm{ECRL}} \approx \frac{R\CL}{T}\,\CL\VDD^2
   + \tfrac12\,\CL\,|V_{\mathrm{th},p}|^2 .
   \label{eq:ecrl}
 \end{equation}
-In practice $|V_{\mathrm{th},p}|$ is replaced by the measured residual
-voltage, which subthreshold conduction lowers at long $T$ (0.53~V at 10~ns,
-0.42~V at 100~ns here), so the residue term itself shrinks slowly with $T$.
-\guide{Check the prefactor against \cite{moon1996}.}
+In simulation the residue is larger than this single term, because the
+rising output also lags the clock by about $|V_{\mathrm{th},p}|$ before the
+pull-up turns on (\cref{sec:width}), and it shrinks slowly at long $T$,
+because subthreshold conduction lowers the residual voltage (0.53~V at
+10~ns, 0.42~V at 100~ns).
 
-\subsection{Energy--Frequency Relationship}
-Leakage adds a term that grows with the time a node is held, so the total
-energy of a fully adiabatic stage has the form
+\subsection{Energy and Frequency}
+Leakage adds a loss that grows with the time a node is held, so the energy
+of a fully adiabatic stage has the form
 \begin{equation}
   E(T) = \frac{a}{T} + bT, \qquad
   T^{*} = \sqrt{a/b}, \qquad E_{\min} = 2\sqrt{ab},
   \label{eq:ucurve}
 \end{equation}
 where $a$ collects the resistive term of \cref{eq:adiabatic} and $b$ the
-leakage power. For a symmetric trapezoidal power clock with four equal
-intervals of duration $\Tph$, the operating frequency is $f = 1/(4\Tph)$.
-Two frequencies follow from the same clock: the transition frequency
-$f_{\mathrm{tr}}=1/\Tph$ and the operation rate $f_{\mathrm{clk}}=1/(4\Tph)$.
-Plots here use $f_{\mathrm{tr}}$ unless stated. CMOS energy per operation is,
-to first order, independent of $f$ until leakage dominates at low $f$.
+leakage power. For a trapezoidal power clock with four equal intervals of
+length $\Tph$, the clock (operation) frequency is $f_{\mathrm{clk}}=1/(4\Tph)$
+and the transition frequency is $f_{\mathrm{tr}}=1/\Tph$. Plots use
+$f_{\mathrm{tr}}$ unless stated. Static CMOS energy per operation is, to
+first order, independent of $f$.
 
 \subsection{Performance Metrics}
 \begin{align}
@@ -324,8 +341,9 @@ to first order, independent of $f$ until leakage dominates at low $f$.
   \EDP  &= \Eop \times t_{d}, \label{eq:edp}
 \end{align}
 where the sum runs over every supply or power-clock source $k$, $I_k$ is the
-signed current delivered by source $k$ (so recovered energy is subtracted),
-$N$ is the number of averaged cycles and $t_d$ the propagation delay.
+signed current delivered by source $k$ (so returned energy is subtracted),
+$N$ is the number of averaged clock periods and $t_d$ the delay of one
+stage (\cref{sec:edp}).
 
 % =====================================================================
 \section{Simulation Methodology}
@@ -340,30 +358,32 @@ $N$ is the number of averaged cycles and $t_d$ the propagation delay.
 \toprule
 \textbf{Parameter} & \textbf{Value} \\
 \midrule
-Simulator            & ngspice-42, batch mode, SPARSE 1.3 solver \\
+Simulator            & ngspice-45.2 \cite{ngspice,nagel1975}, batch mode, KLU solver \\
 Technology           & SkyWater SKY130 \cite{skywater}, \texttt{tt} corner \\
-MOS models           & \texttt{sky130\_fd\_pr\_\_nfet\_01v8}, \texttt{sky130\_fd\_pr\_\_pfet\_01v8} (reduced include, verified identical to the full \texttt{.lib tt}) \\
+MOS models           & \texttt{sky130\_fd\_pr\_\_nfet\_01v8}, \texttt{sky130\_fd\_pr\_\_pfet\_01v8} (reduced include, identical to the full \texttt{.lib tt}) \\
 Temperature          & 27~\si{\celsius} \\
-$\VDD$ / clock swing & 1.8~\si{\volt}, 0 to 1.8~V trapezoid \\
-Time step            & ECRL: 10~ps; 2LAL: $\Tph/500$ \\
-Simulation time      & ECRL: $20\Tph$ (5 clock periods); 2LAL: $8T_{\mathrm{rail}}$ \\
+$\VDD$ / clock swing & 1.8~V; trapezoidal clock from 0 to 1.8~V \\
+Maximum time step    & ECRL: 10~ps; 2LAL: $\Tph/500$ \\
+Simulated time       & ECRL: $20\Tph$ (5 clock periods); 2LAL: $6T_{\mathrm{rail}}+\Tph$ \\
 Solver options       & ECRL: defaults; 2LAL: \texttt{reltol=1e-4}, \texttt{abstol=1e-13}, \texttt{vntol=1e-7}, \texttt{chgtol=1e-16}, \texttt{gmin=1e-14}, Gear order 2, \texttt{uic} with rest-state initial conditions \\
 \bottomrule
 \end{tabular}
 \end{table}
-\Cref{tab:env} lists the simulation setup. Devices are written in
-microns because the models set \texttt{.option scale=1.0u}. The reduced
-model include was checked against the full library at four grid points
-(both give $1.80491\times10^{-14}$~J for the original ECRL deck).
+\Cref{tab:env} lists the setup. Device sizes are written in microns because
+the models set \texttt{.option scale=1.0u}. The reduced model include, which
+loads only the two devices used, was checked against the full library at
+four sweep points (both give $1.80491\times10^{-14}$~J for the original ECRL
+deck).
 
 \subsection{Circuits Under Investigation}
-Three circuits are intended: a static CMOS inverter (\cref{fig:cmos}), an
-ECRL inverter (\cref{fig:ecrl}) and a 2LAL quad-rail inverter
-(\cref{fig:2lal}). \tbd[: the CMOS deck is not yet in the repository].
-ECRL is simulated as a single gate driven by ideal slow-ramp inputs. 2LAL is
-simulated as a chain: stage 0 drives, stages 1--4 are metered, and stages
-5--7 are unmetered loads. Netlists are hand-written and parameterised; the
-2LAL cell follows the 4lc PHAS2 cell \cite{debenedictis4lc}.
+Three circuits are simulated. The CMOS reference is a static inverter
+(\cref{fig:cmos}) with $W=1$~\textmu m devices, 100~ps input edges and the
+same load. ECRL is a single gate (\cref{fig:ecrl}) driven by ideal inputs that
+ramp over one full phase inside the wait interval. 2LAL is a closed ring of
+eight quad-rail inverter stages (\cref{sec:termination}), all of which are
+metered. The CMOS and ECRL netlists are written by hand; the 2LAL ring is
+generated by a script, because its 16 cells, 32 loads, initial conditions
+and 96 logic checks all follow from one rule.
 
 \begin{figure}[!t]
 \centering
@@ -390,154 +410,187 @@ simulated as a chain: stage 0 drives, stages 1--4 are metered, and stages
 \centering
 \begin{tabular}{@{}L{0.27\columnwidth}L{0.3\columnwidth}L{0.33\columnwidth}@{}}
 \toprule
-\textbf{Parameter} & \textbf{Nominal} & \textbf{Swept range} \\
+\textbf{Parameter} & \textbf{Nominal} & \textbf{Swept values} \\
 \midrule
 $\VDD$               & 1.8~V         & -- \\
 $W_n = W_p$          & 1.0~\textmu m  & 0.84, 1.0, 1.2, 1.5, 2.0, 3.0 \\
 $L$                  & 0.15~\textmu m & 0.15, 0.18, 0.25, 0.35, 0.5, 0.75, 1.0, 1.5, 2.0 \\
 $\CL$ (each metered node) & 25~fF    & 5, 10, 25, 50, 100, 200 \\
-$\Tph$               & 10~ns          & 1, 2, 5, 10, 20, 50, 100 \\
-$f_{\mathrm{tr}}=1/\Tph$ & 100~MHz    & 1000 to 10 \\
-$f_{\mathrm{clk}}=1/(4\Tph)$ & 25~MHz & 250 to 2.5 \\
-Input pattern        & 1,0,1,0 (one change per clock period) & -- \\
-Input edge           & ECRL: ramp over one full phase in the wait window; 2LAL: rail-derived pulses & -- \\
-Stages               & ECRL: 1; 2LAL: 8 (4 metered) & -- \\
+$\Tph$ (ns)          & 10             & 1, 2, 5, 10, 20, 50, 100 \\
+$f_{\mathrm{tr}}=1/\Tph$ (MHz) & 100  & 1000 to 10 \\
+$f_{\mathrm{clk}}=1/(4\Tph)$ (MHz) & 25 & 250 to 2.5 \\
+Input data           & 1,0,1,0 (one change per clock period) & -- \\
+Input edges          & ECRL: ramp over one phase in the wait interval; 2LAL: derived from the rails & -- \\
+Stages               & ECRL: 1; 2LAL: 8-stage ring, all metered & -- \\
 \bottomrule
 \end{tabular}
 \end{table}
-Two conditions are not equal by construction. First, the ECRL input
-energy is supplied by an ideal source and is not metered, while a 2LAL column
-also pays for driving the next stage's gates. Second, per operation an ECRL
-gate swings one 25~fF node, whereas the active 2LAL sub-chain swings two
-(its $T$ node up and down, its $C$ node down and up).
+Three conditions differ by construction. First, the ECRL inputs come from
+ideal sources whose energy is not metered, whereas each 2LAL column also pays
+for driving the next stage's gates. Second, per operation an ECRL gate swings
+one 25~fF node, whereas the active 2LAL sub-chain swings two: its $T$ node up
+and down, and its $C$ node down and up. Third, the 2LAL netlist specifies the
+source and drain diffusion geometry of every transistor, whereas the ECRL
+netlist does not, so the model's defaults apply there.
 
-\subsection{Energy Measurement Method}
+\subsection{Energy Measurement}
 \label{sec:meas}
-Energy is the integral of the power delivered by the power clock(s), taken
-over whole clock periods after start-up, so that energy returned to the clock
-is subtracted (\cref{eq:eop}). ngspice counts source current as positive into
-the positive terminal, so delivered power is $-V I$.
+Energy is the integral of the power delivered by the power clock(s) over
+whole clock periods after start-up, so energy returned to a clock is
+subtracted (\cref{eq:eop}). ngspice counts source current as positive into
+the positive terminal, so delivered power is $-VI$.
 
 \emph{ECRL.} A behavioural source converts $-V(\phi)I(V_\phi)$ into a node
-voltage, which is integrated over cycle~3 ($[12,16]\Tph$, data $0\to1$,
-$E_A$) and cycle~4 ($[16,20]\Tph$, data $1\to0$, $E_B$); $E_C=(E_A+E_B)/2$.
-The first three cycles are discarded, and the same two measurements two
-periods earlier serve as a settling check:
+voltage, which is integrated over cycle~3 ($[12,16]\Tph$, data $0\to1$, $E_A$)
+and cycle~4 ($[16,20]\Tph$, data $1\to0$, $E_B$); $E_C=(E_A+E_B)/2$. The first
+three cycles are discarded, and the same two measurements two periods
+earlier serve as a settling check:
 \begin{lstlisting}
 BPCPOWER PCLK 0 V={-V(PHI)*I(VPHI)}
 .meas tran E_A INTEG V(PCLK) FROM={12*TPHASE} TO={16*TPHASE}
 .meas tran E_B INTEG V(PCLK) FROM={16*TPHASE} TO={20*TPHASE}
 \end{lstlisting}
 
-\emph{2LAL.} A 0~V ammeter sits on each rail feeding stages 1--4. A
-behavioural current source equal to $\sum_k V(r_k)I(V_{mk})$ charges a 1~F
-capacitor, so its voltage is the running energy in joules. Rail periods 4
-and 5 are metered and divided by four columns per period. Moving the window
-to periods 6--7 changes the result by less than 0.01\%.
+\emph{2LAL.} A 0~V source on each of the four rails measures its current. A
+behavioural current source equal to $\sum_k V(r_k)\,I(V_{mk})$ charges a
+1~F capacitor, so the capacitor voltage is the running energy in joules. Rail
+periods 0 and 1 are discarded; $E_C$ is the energy of periods 2--5 divided by
+32 (four periods of eight columns), and single-period values $E_A$, $E_B$
+must lie within 1\% of $E_C$ before a point is accepted.
 
-\emph{Why the window matters.} The first ECRL deck metered a cycle with no
-data transition in it. Holding the data static in the corrected deck
-reproduces that value exactly (5.36~fJ at $\Tph=100$~ns); with alternating
-data the same point is 12.46~fJ. In both families $E_A$ and $E_B$ agree to
-the last printed digit, so no activity correction is applied.
+\emph{Calibration.} The same 1~F integrator was checked three ways. Driving
+a static CMOS inverter with $\CL$ from 10 to 100~fF, the slope of energy per
+cycle against $\CL$ must equal $\VDD^2=3.240$~fJ/fF regardless of parasitic
+and short-circuit energy; it measures 3.250~fJ/fF ($+0.3\%$) at both 25 and
+2.5~MHz. Driving an ideal 10~k$\Omega$, 25~fF load from the rail trapezoid,
+where the exact loss is known, the meter agrees within 0.011\% at 1, 10 and
+100~ns. Cutting the maximum time step by four and tightening \texttt{reltol}
+to $10^{-6}$ moves no energy by more than 0.06\%.
+
+\emph{Why the window matters.} The first ECRL deck metered a clock period
+that contained no data transition. Holding the data static in the corrected
+deck reproduces that value exactly (5.36~fJ at $\Tph=100$~ns); with
+alternating data the same point is 12.46~fJ. In both families $E_A$ and $E_B$
+agree to the last printed digit, so no activity correction is applied.
 
 \subsection{Chain Termination (2LAL)}
 \label{sec:termination}
-The committed 2LAL deck ended at stage~5, whose outputs (node~6) were neither
-loaded nor restored. Node~6 then drifts to states in which both sub-chains
-read TRUE. This corrupts node~5 through stage~5's reverse pair, and node~4
-through stage~4's reverse pair, which is metered. At $\Tph=10$~ns the FALSE
-pair at node~4 sits at (0.42, 1.32)~V instead of (0, 1.8)~V. At 50~ns it
-regenerates into a spurious TRUE, and the energy doubles (23.97 to 45.11~fJ
-between 20 and 50~ns at $W=1$~\textmu m). The original functional checks
-sampled $n_1, n_2$ only, and $a_4$ already showed
-$(0.13, 1.64)$~V at 10~ns. Adding two unmetered, loaded stages (6 and 7)
-removes the defect: node~4 reads $(-0.01, 1.80)$~V at every point, and the
-energy becomes monotonic in $\Tph$. A third extra stage changes the result by
-0.2\% at 10~ns and 9\% at 100~ns (0.85 vs.\ 0.93~fJ), which bounds the
-residual boundary sensitivity. All 2LAL results below use the terminated deck.
+In 2LAL each node is restored to rest by the reverse TGs of the \emph{next}
+stage, so the last node of an open chain is never restored. Our first 2LAL
+testbench was such a chain: a driver stage, four metered stages and one load
+stage, whose outputs (node~6) had neither a load nor a successor. Node~6 then
+drifted until both of its sub-chains read TRUE (about 1.67~V on $T$ and
+0.11~V on $C$). That kept stage~5's reverse TGs on in both sub-chains, which
+back-drove node~5 and in turn opened both of stage~4's reverse TGs. The
+metered node $n_{T4}$, which should rest at 0~V, rose to 0.42~V at
+$\Tph=10$~ns, and at slow ramps it snapped to 1.8~V, a non-adiabatic step.
+The result was an energy inflated 3.4$\times$ at 10~ns (21.62 against
+6.29~fJ) and 47$\times$ at 100~ns (44.05 against 0.93~fJ), with a plateau
+of 44--45~fJ at slow ramps that coincides with the 43.8~fJ static CMOS
+reference. The functional checks of that deck sampled only nodes
+$a_1$--$a_4$ and $n_1$--$n_2$ and did not see the fault.
+
+The corrected testbench closes the chain into a ring of eight stages, as in
+DeBenedictis's 2LAL testbenches \cite{debenedictis4lc}. A ring
+has no last node, needs no unmetered driver or load stages, and is
+seeded with two data waves through initial conditions. As an independent
+check, the open chain was also terminated with ideal sources carrying the
+known data into node~6; that version and the ring agree within 0.8\% at all
+42 width-sweep points.
 
 \subsection{Functional Verification}
+\label{sec:func}
 \begin{figure}[!t]
 \centering
-\simfig{\columnwidth}{figs/fig03_cmos_wave.pdf}\\[2pt]
-\simfig{\columnwidth}{figs/fig_ecrl_waveform.png}\\[2pt]
-\simfig{\columnwidth}{figs/fig05_2lal_wave.pdf}
-\caption{Transient waveforms: (top) CMOS, (middle) ECRL, (bottom) 2LAL.}
+\simfig{\columnwidth}{../verification/figures/ecrl_inverter_T10.png}\\[2pt]
+\simfig{\columnwidth}{../verification/figures/2lal_inverter_stage_T10.png}
+\caption{Transient waveforms at $\Tph=10$~ns, $W=1$~\textmu m, $\CL=25$~fF:
+(top) ECRL, where $\mathit{out}$ pulses when $\mathit{in}=0$ and $\outb$ when
+$\mathit{in}=1$; (bottom) one 2LAL stage (node~3 to node~4), whose output is
+the inverse of its input one $\Tph$ later. Red labels are the logic values
+decoded from the waveforms.}
 \label{fig:waves}
 \end{figure}
-Functional correctness is checked with \texttt{.meas} samples mid-hold at
-both bit values, at every $\Tph$, before any energy is accepted. For ECRL at
-$W=1$~\textmu m and $\Tph=10$~ns, $\mathit{in}=1$ gives
-$(\mathit{out},\outb)=(0.2~\text{\textmu V}, 1.80~\text{V})$ and $\mathit{in}=0$
-the reverse. For 2LAL, TRUE $=(1.8, 0)$ and FALSE $=(0, 1.8)$, and
-stages alternate ($a_1=\overline{b}$, $a_2=b$, \dots). In the terminated
-deck all sampled nodes, including $n_3$ and $n_4$, are within 20~mV of
-the ideal levels (32 checks per run; largest error 23~mV, at $W=3$~\textmu m,
-$\Tph=1$~ns), checked at $W=0.84$, 1.0 and 3.0~\textmu m across the $\Tph$ range.
-\tbd[: CMOS waveform; export ECRL/2LAL plots to \texttt{figs/}.]
+Logic is checked at every simulated point before its energy is accepted
+(\cref{fig:waves}). For ECRL, both outputs are sampled mid-hold in both data
+cycles and must lie within 10\% of the rails; at $W=1$~\textmu m and
+$\Tph=10$~ns, $\mathit{in}=1$ gives $(\mathit{out},\outb)=(0.2~\text{\textmu V},
+1.80~\text{V})$, and $\mathit{in}=0$ the reverse. For 2LAL, TRUE $=(\VDD,0)$
+and FALSE $=(0,\VDD)$, and the ring deck carries 96 checks per run: in two
+rail periods, every node's active sub-chain is sampled at the top of its
+pulse and back at rest, and its idle sub-chain must stay within 10\% of rest
+over the whole period. Which sub-chain is active at each node is predicted
+from the seed, not read from the simulation.
 
-\subsection{Parameter Sweep Methodology}
-Five one-at-a-time sweeps are performed about the nominal point of
-\cref{tab:cond}: frequency, $\Tph$, transistor width, channel length and load
-capacitance. The length and load sweeps are each crossed with the full
-$\Tph$ grid.
-A two-dimensional sweep of $f$ and $\CL$ produces the operating-region map of
-\cref{sec:region} (\tbd, not yet run). Sweeps are scripted
-(\texttt{run\_2lal\_sweep.sh}, \texttt{run\_ecrl\_slowramp\_sweep.sh}): each
-point is a separate batch run, results pass from \texttt{.meas} to CSV to
-gnuplot without manual editing, and a run with no $E_C$ line is treated as
-an error. In the length and load sweeps
-(\texttt{run\_2lal\_lc\_sweep.sh}, \texttt{run\_ecrl\_lc\_sweep.sh}), a point
-whose logic fails (a long channel or a large load that cannot reach the rails
-at the fastest ramps) is recorded as a result and excluded from fits and
-plots. A failed substitution, a simulator error, or a $W$, $L$ or $\Tph$
-read back from the simulator that differs from the request still stops the
-sweep.
+Two further checks guard the checks themselves. A waveform decoder, which
+never uses the predicted values to decide pass or fail, confirms at
+$\Tph=1$, 10 and 100~ns that exactly one sub-chain of every node pulses in
+every period and that every stage's output is the inverse of its input one
+$\Tph$ later (42 of 42 stage-periods per run, and 154 of 154 over 20 rail
+periods at 100~ns). This is the 2LAL timing rule of one tick of delay per
+stage \cite{frank2017tutorial}. A mutation test breaks the ring in one place
+at a time: each of six logic defects fails between 16 and 48 of the 96
+checks, while the unmodified deck fails none. One defect, a stage that does
+not invert, leaves the energy unchanged (6.29~fJ), so only the logic checks
+can detect it.
+
+\subsection{Parameter Sweeps}
+Four parameters are swept one at a time about the nominal point of
+\cref{tab:cond}: ramp time (and with it frequency), transistor width, channel
+length and load capacitance. The width, length and
+load sweeps are each crossed with all seven ramp times. Each point is a
+separate batch run, and results pass from \texttt{.meas} to CSV to gnuplot
+without manual editing. A point is accepted only if the substituted values
+appear in the deck, ngspice exits without errors or warnings, every
+\texttt{.meas} is present, and the device sizes and $\Tph$ read back from
+the simulator equal the request. In the length and load sweeps, a point whose
+logic fails, because a long channel or a large load cannot reach the rails
+at the fastest ramps, is recorded as such and excluded from fits and plots.
 
 \subsection{Choice of the Fixed Operating Point}
 \label{sec:fixedpoint}
 The length sweep holds $W=1.0$~\textmu m and $\CL=25$~fF; the load sweep holds
-$W=1.0$~\textmu m and $L=0.15$~\textmu m. The reasons are:
+$W=1.0$~\textmu m and $L=0.15$~\textmu m. The reasons are these.
 \begin{itemize}
-\item \emph{It is the anchor of every other result.} Both sweeps pass
-  through $W=1.0$~\textmu m, $L=0.15$~\textmu m, $\CL=25$~fF, and each sweep
-  script checks at the end that it reproduces the width sweep there; it does,
-  to every printed digit. A change in a deck or in the models therefore shows
-  up as a failed anchor.
+\item \emph{It is the anchor of every other result.} Both sweeps pass through
+  $W=1.0$~\textmu m, $L=0.15$~\textmu m, $\CL=25$~fF, and each sweep script
+  checks that it reproduces the width sweep there; it does, to every printed
+  digit. A change in a deck or in the models therefore shows up as a failed
+  anchor.
 \item \emph{A formula-optimal width does not stay optimal across a length
   sweep.} The adiabatic term behaves as $a\propto R\,(\CL+kW)^2$ with
-  $R\propto1/W$, which is minimised at $W^{*}=\CL/k$: widening pays only while
-  the transistor's own capacitance stays below the load \cite{fischer2003,
-  fischer2004}. At $L=0.15$~\textmu m the width sweep gives
+  $R\propto1/W$, which is smallest at $W^{*}=\CL/k$: widening pays only while
+  the transistor's own capacitance stays below the load
+  \cite{fischer2003,fischer2004}. At $L=0.15$~\textmu m the width sweep gives
   $k=7.1$~fF/\textmu m, so $W^{*}=3.5$~\textmu m. The gate part of $k$ grows
   with $L$ (12.6~fF/\textmu m per \textmu m of $L$, \cref{sec:length}), so
   $k=7.1+12.6(L-0.15)$ and $W^{*}$ falls to about 1.4~\textmu m at
   $L=1$~\textmu m and 0.8~\textmu m at $L=2$~\textmu m. Fixing $W$ at
   3.5~\textmu m would turn the long-channel points into a measurement of gate
   capacitance.
-\item \emph{The extremes are worse.} Minimum width (0.42~\textmu m)
-  maximises $R$, so long channels fail logic at even more ramp times, and it
-  sits beside narrow-width model-bin edges. The largest width lets the gate
-  load, which grows as $W L$, dominate $\CL$.
+\item \emph{The extremes are worse.} The minimum width (0.42~\textmu m)
+  maximises $R$, so long channels would fail logic at more ramp times, and it
+  is the smallest width the SKY130 pFET model covers. The largest width lets
+  the gate load, which grows as $WL$, dominate $\CL$.
 \item \emph{$L=0.15$~\textmu m for the load sweep} is the minimum length,
   which the length sweep shows to be the lowest-energy length at every $\Tph$
   except 100~ns, where 0.18~\textmu m is 0.8\% lower because it leaks less.
 \end{itemize}
-The 2LAL deck previously set the source/drain diffusion area as
-$W\cdot L\cdot1.77$, so a longer channel also grew the junctions. Diffusion
-geometry now uses a separate $L_{\mathrm{dif}}=0.15$~\textmu m. At
+The 2LAL deck originally set the source and drain diffusion areas to
+$1.77\,W L$, so a longer channel also enlarged the junctions. The diffusion
+geometry now uses a separate length $L_{\mathrm{dif}}=0.15$~\textmu m; at
 $L=0.15$~\textmu m the deck is numerically unchanged.
 
 % =====================================================================
-\section{Experimental Investigation}
+\section{Results}
 \label{sec:results}
-All energies are $E_C$ in fJ per operation (one operation = one clock period
-per ECRL gate, or per quad-rail 2LAL column). ECRL values are from
-\texttt{ecrl\_slowramp\_sweep.csv}; 2LAL values are from the terminated deck
-(\cref{sec:termination}). No CMOS deck has been simulated yet; where a CMOS
-reference is needed, the analytical dissipation per transition,
-$\tfrac12\CL\VDD^2=40.5$~fJ for 25~fF, is used and labelled as such.
+All energies are $E_C$ in fJ per operation. One operation is one clock period
+of one ECRL gate or of one 2LAL quad-rail column; since the data changes in
+every period, this is also the energy per data transaction. The CMOS
+reference is the simulated inverter of \cref{fig:cmos}: 43.77~fJ per output
+transition at $\CL=25$~fF, measured with input periods of 40 and 400~ns
+(they differ by 0.1\%). With alternating data its output makes one transition
+per clock period, so 43.8~fJ is its energy per operation at every frequency.
 
 \subsection{Baseline Comparison}
 Fixed conditions: $\VDD=1.8$~V, $W=1.0$~\textmu m, $L=0.15$~\textmu m,
@@ -552,140 +605,97 @@ $\CL=25$~fF, $\Tph=10$~ns ($f_{\mathrm{tr}}=100$~MHz, $f_{\mathrm{clk}}=25$~MHz)
 \textbf{Logic} & \textbf{$E$ (fJ)} & \textbf{$P$ (\si{\micro\watt})}
   & \textbf{$t_d$ (ns)} & \textbf{EDP (fJ$\cdot$ns)} \\
 \midrule
-CMOS & \tbd\,$^{a}$ & \tbd & \tbd & \tbd \\
-ECRL & 21.66 & 0.542 & 10 & 216.6 \\
-2LAL & 6.31  & 0.158 & 10 & 63.1 \\
+CMOS & 43.77 & 1.094 & 0.119 & 5.20 \\
+ECRL & 21.66 & 0.541 & 10 & 216.6 \\
+2LAL & 6.29  & 0.157 & 10 & 62.9 \\
 \bottomrule
 \multicolumn{5}{@{}p{0.95\columnwidth}@{}}{\footnotesize
-$P=E\,f_{\mathrm{clk}}$. $t_d$ is the clock-defined latency of one stage
-($\Tph$); see \cref{sec:edp}. $^{a}$Analytical reference
-$\tfrac12\CL\VDD^2=40.5$~fJ per transition.}
+$P=E\,f_{\mathrm{clk}}$. For ECRL and 2LAL, $t_d$ is the clock-defined
+latency of one stage, $\Tph$ (\cref{sec:edp}); for CMOS it is the simulated
+propagation delay, the mean of $t_{\mathrm{PHL}}=0.076$~ns and
+$t_{\mathrm{PLH}}=0.162$~ns with 100~ps input edges.}
 \end{tabular}
 \end{table}
-\begin{figure}[!t]
-\centering
-\simfig{\columnwidth}{figs/fig06_energy_baseline.pdf}
-\caption{Energy per operation at the nominal point.}
-\label{fig:baseline}
-\end{figure}
-At the nominal point, 2LAL dissipates 6.31~fJ and ECRL 21.66~fJ per
-operation, a ratio of 3.43. Both are below the 40.5~fJ analytical CMOS
-reference, by 84\% (2LAL) and 47\% (ECRL). The ECRL gate returns 62.9\% of
-the energy its clock delivers (36.72 of 58.38~fJ), and the 2LAL column returns
-90.8\% (62.28 of 68.58~fJ).
+At the nominal point, 2LAL dissipates 6.29~fJ and ECRL 21.66~fJ per
+operation, a ratio of 3.44. Both are below the 43.77~fJ of static CMOS, by
+86\% (2LAL) and 51\% (ECRL). Of the energy its clock delivers, the ECRL gate
+returns 62.9\% (36.71 of 58.37~fJ) and the 2LAL column 95.1\% (123.3 of
+129.6~fJ).
 
-\subsection{Effect of Frequency}
+\subsection{Effect of Frequency and Ramp Time}
 \label{sec:freq}
-$\Tph$ is swept from 1 to 100~ns with all other parameters at nominal.
+$\Tph$ is swept from 1 to 100~ns with all other parameters at nominal
+(\cref{tab:freq,fig:freq}). Because $f_{\mathrm{clk}}=1/(4\Tph)$, frequency
+and ramp time are the same variable.
 \begin{table}[!t]
-\caption{Energy per Operation (fJ) Versus Frequency ($W=1$~\textmu m)}
+\caption{Energy per Operation Versus Ramp Time ($W=1$~\textmu m)}
 \label{tab:freq}
 \centering
 \setlength{\tabcolsep}{3.5pt}
 \begin{tabular}{@{}cccccc@{}}
 \toprule
-\textbf{$f_{\mathrm{tr}}$} & \textbf{$f_{\mathrm{clk}}$} & \textbf{CMOS}
-  & \textbf{ECRL} & \textbf{2LAL} & \textbf{Ratio} \\
-(MHz) & (MHz) & (fJ) & (fJ) & (fJ) & E/2 \\
+\textbf{$\Tph$} & \textbf{$f_{\mathrm{clk}}$} & \textbf{ECRL} & \textbf{2LAL}
+  & \textbf{Ratio} & \textbf{2LAL $E\Tph$} \\
+(ns) & (MHz) & (fJ) & (fJ) & E/2 & (fJ$\cdot$ns) \\
 \midrule
-1000 & 250  & \tbd & 54.69 & 46.13 & 1.19 \\
-500  & 125  & \tbd & 39.82 & 26.45 & 1.51 \\
-200  & 50   & \tbd & 27.32 & 11.93 & 2.29 \\
-100  & 25   & \tbd & 21.66 & 6.31  & 3.43 \\
-50   & 12.5 & \tbd & 17.83 & 3.31  & 5.38 \\
-20   & 5    & \tbd & 14.37 & 1.39  & 10.3 \\
-10   & 2.5  & \tbd & 12.46 & 0.85  & 14.6 \\
+1   & 250  & 54.69 & 46.10 & 1.19  & 46.1 \\
+2   & 125  & 39.82 & 26.49 & 1.50  & 53.0 \\
+5   & 50   & 27.32 & 11.93 & 2.29  & 59.6 \\
+10  & 25   & 21.66 & 6.29  & 3.44  & 62.9 \\
+20  & 12.5 & 17.83 & 3.27  & 5.46  & 65.3 \\
+50  & 5    & 14.37 & 1.44  & 9.96  & 72.1 \\
+100 & 2.5  & 12.46 & 0.93  & 13.4  & 93.1 \\
 \bottomrule
-\multicolumn{6}{@{}l@{}}{\footnotesize Ratio = ECRL/2LAL.} \\
+\multicolumn{6}{@{}l@{}}{\footnotesize Ratio = ECRL/2LAL. Static CMOS: 43.77~fJ at every $\Tph$.} \\
 \end{tabular}
 \end{table}
 \begin{figure}[!t]
 \centering
-\simfig{\columnwidth}{figs/fig07_energy_vs_freq.pdf}\\[2pt]
-\simfig{\columnwidth}{figs/fig08_power_vs_freq.pdf}
-\caption{(top) Energy and (bottom) average power versus $f_{\mathrm{tr}}$.}
+\simfig{\columnwidth}{../plots/ecrl_vs_2lal_W1.0.png}
+\caption{Energy per operation versus transition frequency
+$f_{\mathrm{tr}}=1/\Tph$, $W=1$~\textmu m, $\CL=25$~fF.}
 \label{fig:freq}
 \end{figure}
-\emph{(1) How energy changes with frequency.} Energy per operation rises
-monotonically with frequency in both families. From 10 to 1000~MHz, ECRL
-rises 4.4$\times$ (12.46 to 54.69~fJ) and 2LAL rises 54$\times$ (0.85 to
-46.13~fJ). Average power $E f_{\mathrm{clk}}$ rises much faster because both
-factors grow: ECRL goes from 31~nW to 13.7~\textmu W, and 2LAL from 2.1~nW to
-11.5~\textmu W.
 
-\emph{(2) Strongest frequency dependence.} 2LAL. Its log--log slope of $E$
-against $\Tph$ is $-0.94$ between 10 and 50~ns at $W=1$~\textmu m ($-0.89$ to
-$-0.99$ over all widths). ECRL's slope is only $-0.24$ from 10 to 100~MHz and
-$-0.40$ from 100 to 1000~MHz.
+\emph{Energy.} Energy per operation rises with frequency in both families.
+From 10 to 1000~MHz ($\Tph$ from 100 to 1~ns), ECRL rises 4.4$\times$
+(12.46 to 54.69~fJ) and 2LAL 49.5$\times$ (0.93 to 46.10~fJ). Average power
+$E f_{\mathrm{clk}}$ rises faster because both factors grow: from 31~nW to
+13.7~\textmu W for ECRL, and from 2.3~nW to 11.5~\textmu W for 2LAL.
 
-\emph{(3) Where the relative advantage changes.} With the terminated deck,
-the families do not cross within 10--1000~MHz: 2LAL is lower at every point.
-The gap narrows towards high frequency (1.19$\times$ at 1000~MHz). Against the
-analytical CMOS reference, ECRL reaches 40.5~fJ between 500~MHz (39.82~fJ)
-and 1000~MHz (54.69~fJ), and 2LAL between 500~MHz (26.45~fJ) and 1000~MHz
-(46.13~fJ). \guide{Replace with the simulated CMOS crossover.}
+\emph{Dependence on ramp time.} The log--log slope of $E$ against $\Tph$
+between 10 and 50~ns is $-0.92$ for 2LAL at $W=1$~\textmu m and between
+$-0.84$ and $-0.96$ across the six widths. For ECRL it is $-0.24$ between 10
+and 100~ns and $-0.40$ between 1 and 10~ns.
 
-\emph{(4) Agreement with theory.} 2LAL follows the $1/T$ law of
-\cref{eq:adiabatic} over 5--50~ns. Its $E\cdot\Tph$ product rises only from
-59.7 to 69.5~fJ$\cdot$ns while $\Tph$ grows 10$\times$. The deviation at
-1~ns ($E\Tph=46.1$) is expected as $\Tph$ approaches $RC$. ECRL does not
-follow a pure $c + a/T$ law: a least-squares fit leaves systematic residuals
-of up to 3.7~fJ. An empirical $c + a/\sqrt{T}$ form fits within 0.9~fJ, but
-we attach no physical meaning to the exponent. The shallow slope agrees with
-\cref{eq:ecrl}, which has a residue term that does not scale as $1/T$. That
-residue itself falls slowly with $T$, because the stranded voltage decays
-from 0.53~V to 0.42~V between 10 and 100~ns.
+\emph{Relative advantage.} 2LAL is below ECRL at every point, and the gap
+grows as the clock slows, from 1.19$\times$ at 1~ns to 13.4$\times$ at
+100~ns. Against static CMOS, ECRL crosses 43.8~fJ between $\Tph=2$~ns
+(39.82~fJ) and 1~ns (54.69~fJ), and 2LAL between 2~ns (26.49~fJ) and 1~ns
+(46.10~fJ).
 
-\subsection{Effect of Transition Time}
-\label{sec:tph}
-Because $f_{\mathrm{clk}}=1/(4\Tph)$, this sweep is the same data as
-\cref{tab:freq} viewed on the time axis.
-\begin{table}[!t]
-\caption{Energy (fJ) and Returned Fraction Versus $\Tph$ ($W=1$~\textmu m)}
-\label{tab:tph}
-\centering
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{@{}cccccc@{}}
-\toprule
-\textbf{$\Tph$} & \textbf{$f_{\mathrm{clk}}$} & \textbf{ECRL} & \textbf{2LAL}
-  & \textbf{ECRL} & \textbf{2LAL} \\
-(ns) & (MHz) & $E$ (fJ) & $E$ (fJ) & $E\Tph$ & $E\Tph$ \\
-\midrule
-1   & 250  & 54.69 & 46.13 & 54.7   & 46.1 \\
-2   & 125  & 39.82 & 26.45 & 79.6   & 52.9 \\
-5   & 50   & 27.32 & 11.93 & 136.6  & 59.7 \\
-10  & 25   & 21.66 & 6.31  & 216.6  & 63.1 \\
-20  & 12.5 & 17.83 & 3.31  & 356.5  & 66.3 \\
-50  & 5    & 14.37 & 1.39  & 718.3  & 69.5 \\
-100 & 2.5  & 12.46 & 0.85  & 1245.9 & 85.3 \\
-\midrule
-\multicolumn{6}{@{}p{0.95\columnwidth}@{}}{\footnotesize Returned/delivered
-energy: ECRL 62.9\% (10~ns), 76.0\% (100~ns); 2LAL 90.8\% (10~ns), 98.8\%
-(100~ns). $E\Tph$ in fJ$\cdot$ns.} \\
-\bottomrule
-\end{tabular}
-\end{table}
-\begin{figure}[!t]
-\centering
-\simfig{\columnwidth}{figs/fig09_energy_vs_tph.pdf}
-\caption{Energy versus $\Tph$ (log--log).}
-\label{fig:tph}
-\end{figure}
-Transition time sets dissipation because the charging current is
-$\approx\CL\VDD/\Tph$, and the resistive loss is $I^2R$ integrated over
-$\Tph$. Doubling $\Tph$ halves the current, quarters the power and doubles the
-duration, so the loss halves (\cref{eq:adiabatic}). 2LAL shows this directly
-and returns 98.8\% of the delivered energy at 100~ns. ECRL recovers less
-(76.0\% at 100~ns) because part of each cycle's loss is the threshold residue
-dumped to ground when the data changes.
+\emph{Agreement with theory.} 2LAL follows the $1/T$ law of
+\cref{eq:adiabatic}: its $E\Tph$ product rises only from 59.6 to
+72.1~fJ$\cdot$ns while $\Tph$ grows from 5 to 50~ns. Below 5~ns the product
+falls (46.1~fJ$\cdot$ns at 1~ns) as $\Tph$ approaches $R\CL$, and above 50~ns
+it rises (93.1~fJ$\cdot$ns at 100~ns) as leakage begins to count. Fitting
+the exact-ramp form $E=K\,g(\Tph,\tau)+E_0+c\Tph$ to the seven points gives a
+fixed term $E_0$ of only 0.11~fJ for 2LAL, 0.14\% of $\CL\VDD^2$, with
+1.1\% RMS error. The same fit for ECRL gives $E_0=15.1$~fJ, 18.7\% of
+$\CL\VDD^2$: the threshold residue of \cref{eq:ecrl}. Its leakage coefficient
+comes out negative, because the residue itself falls slowly with $\Tph$ as
+the residual voltage drops from 0.53 to 0.42~V between 10 and 100~ns.
 
-The leakage term $b\Tph$ of \cref{eq:ucurve} does not produce a minimum within
-the swept range: 2LAL energy still falls from 50 to 100~ns at every width.
-It does flatten, however: $E\Tph$ rises from 69.5 to 85.3~fJ$\cdot$ns at
-$W=1$~\textmu m, and at $W=0.84$~\textmu m the slope from 50 to 100~ns is
-only $-0.5$. Locating $T^{*}$ requires $\Tph>100$~ns. \tbd
+Returned energy follows the same pattern. Between 10 and 100~ns, the share of
+delivered energy returned to the clock rises from 95.1\% to 99.3\% for 2LAL,
+but only from 62.9\% to 76.0\% for ECRL, because part of each ECRL cycle's
+loss is the residue discharged to ground when the data changes. No minimum
+of \cref{eq:ucurve} appears within the sweep: 2LAL energy still falls from
+50 to 100~ns at every width, although the slope there flattens to between
+$-0.26$ and $-0.87$. Locating $T^{*}$ needs $\Tph>100$~ns.
 
 \subsection{Effect of Transistor Width}
+\label{sec:width}
 \begin{table}[!t]
 \caption{Energy (fJ) Versus Transistor Width at Two Ramp Times}
 \label{tab:width}
@@ -697,50 +707,47 @@ only $-0.5$. Locating $T^{*}$ requires $\Tph>100$~ns. \tbd
 \cmidrule(lr){2-3}\cmidrule(l){4-5}
 \textbf{$W$ (\textmu m)} & \textbf{1~ns} & \textbf{100~ns} & \textbf{1~ns} & \textbf{100~ns} \\
 \midrule
-0.84 & 59.59 & 12.61 & 50.53 & 1.16 \\
-1.0  & 54.69 & 12.46 & 46.13 & 0.85 \\
-1.2  & 51.12 & 12.56 & 42.94 & 0.62 \\
-1.5  & 46.05 & 11.97 & 38.27 & 0.55 \\
-2.0  & 41.40 & 11.73 & 35.76 & 0.65 \\
-3.0  & 36.43 & 11.55 & 33.79 & 0.77 \\
+0.84 & 59.59 & 12.61 & 50.30 & 1.27 \\
+1.0  & 54.69 & 12.46 & 46.10 & 0.93 \\
+1.2  & 51.12 & 12.56 & 43.05 & 0.67 \\
+1.5  & 46.05 & 11.97 & 38.42 & 0.62 \\
+2.0  & 41.40 & 11.73 & 35.91 & 0.75 \\
+3.0  & 36.43 & 11.55 & 33.95 & 0.90 \\
 \bottomrule
 \end{tabular}
 \end{table}
 \begin{figure}[!t]
 \centering
-\simfig{\columnwidth}{figs/fig10_energy_vs_width.pdf}\\[2pt]
-\simfig{\columnwidth}{figs/fig11_delay_vs_width.pdf}
-\caption{(top) Energy versus width; (bottom) \tbd[: output-to-clock lag
-versus width, see text].}
+\simfig{\columnwidth}{../plots/2lal_energy_vs_ftr.png}\\[2pt]
+\simfig{\columnwidth}{../plots/ecrl_slowramp_energy_vs_ftr.png}
+\caption{Energy versus transition frequency for six widths: (top) 2LAL,
+(bottom) ECRL; $L=0.15$~\textmu m, $\CL=25$~fF.}
 \label{fig:width}
 \end{figure}
-Widening the devices lowers the channel resistance $R$ in
-\cref{eq:adiabatic}, but it adds gate and junction capacitance. The benefit
-therefore appears only where the loss is resistive. Going from 0.84 to
-3.0~\textmu m lowers energy at 1~ns by 38.9\% (ECRL) and 33.1\% (2LAL), and
-at 10~ns by 19.8\% (ECRL, 22.55 to 18.09~fJ) and 39.8\% (2LAL, 6.89 to
-4.15~fJ). At 100~ns ECRL improves by only 8.4\%, because its remaining loss is
-mostly the threshold residue, which does not depend on $R$. 2LAL at 100~ns has
-its minimum at 1.5~\textmu m (0.55~fJ) and rises 40\% by 3.0~\textmu m. This
-is consistent with extra capacitance and leakage outweighing the lower
-resistance once the $RC/T$ term is small.
+Widening the devices lowers $R$ in \cref{eq:adiabatic} but adds gate and
+junction capacitance, so it helps only where the loss is resistive
+(\cref{tab:width,fig:width}). From 0.84 to 3.0~\textmu m, energy falls by
+38.9\% (ECRL) and 32.5\% (2LAL) at 1~ns, and by 19.8\% (ECRL, 22.55 to
+18.09~fJ) and 39.4\% (2LAL, 6.88 to 4.17~fJ) at 10~ns. At 100~ns ECRL
+improves by only 8.4\%, because most of its loss is the threshold residue,
+which does not depend on $R$. 2LAL at 100~ns is lowest at 1.5~\textmu m
+(0.62~fJ) and 45\% higher at 3.0~\textmu m, where the extra capacitance and
+leakage outweigh the lower resistance.
 
-In these cells, delay is set by the clock, not by drive strength: each stage
-advances one phase ($\Tph$) as long as its output settles within the ramp. A
-width sweep therefore changes how closely the output tracks the rail, not the
-latency. For example, at $\Tph=10$~ns the ECRL output lags the clock at
-mid-ramp (0.24~V against 0.90~V), but at 100~ns it tracks it (0.89~V against
-0.90~V). \tbd[: add a lag or settling metric versus $W$ if the delay figure is kept.]
-\guide{The committed 2LAL sweep showed wider devices as worse at every
-frequency. That trend was produced by the termination defect and should not
-be reported.}
+In both families the latency is set by the clock, not by drive strength:
+each stage advances by one phase ($\Tph$) as long as its output settles
+within the ramp. Width therefore changes how closely the output tracks the
+rail, not the latency. At $W=1$~\textmu m, the rising ECRL output is at
+0.23~V when the clock is at mid-ramp (0.90~V) for $\Tph=10$~ns, and at
+0.89~V for $\Tph=100$~ns.
 
 \subsection{Effect of Load Capacitance}
 \label{sec:cl}
-Theory predicts that CMOS scales as $\CL$ (\cref{eq:cmos}), the adiabatic
-resistive term as $\CL^2$ at fixed $R$ and $T$ (\cref{eq:adiabatic}), and the
-ECRL residue as $\CL$ (\cref{eq:ecrl}). $\CL$ is swept from 5 to 200~fF at
-$W=1.0$~\textmu m, $L=0.15$~\textmu m (\cref{tab:cl,fig:cl}).
+Theory predicts that CMOS energy scales as $\CL$ (\cref{eq:cmos}), the
+adiabatic resistive term as $\CL^2$ at fixed $R$ and $T$
+(\cref{eq:adiabatic}), and the ECRL residue as $\CL$ (\cref{eq:ecrl}).
+$\CL$ is swept from 5 to 200~fF at $W=1.0$~\textmu m, $L=0.15$~\textmu m
+(\cref{tab:cl,fig:cl}).
 \begin{table}[!t]
 \caption{Energy (fJ) Versus Load Capacitance ($W=1$~\textmu m, $L=0.15$~\textmu m)}
 \label{tab:cl}
@@ -770,25 +777,27 @@ $W=1.0$~\textmu m, $L=0.15$~\textmu m (\cref{tab:cl,fig:cl}).
 Points whose logic fails are omitted.}
 \label{fig:cl}
 \end{figure}
-The two families separate as predicted. For 2LAL, fitting
-$E(\Tph)$ at each load and writing the $1/\Tph$ coefficient as
-$a=4R(\CL+C_p)^2\VDD^2$ (four node swings per operation) makes
-$\sqrt{a/4\VDD^2}$ a straight line in $\CL$; it is linear within 1.0\% at
+The two families scale differently, as predicted. For 2LAL, we fit $E(\Tph)$
+at each load and write the $1/\Tph$ coefficient as
+$a=4R(\CL+C_p)^2\VDD^2$, for four node swings per operation. Then
+$\sqrt{a/4\VDD^2}$ should be a straight line in $\CL$; it is, within 1.0\% at
 all six loads. Its slope gives $R=4.54$~k$\Omega$, against 4.92~k$\Omega$
-measured directly as the mean DC on-resistance of the transmission gate
-($-8\%$), and its intercept gives $C_p=7.7$~fF. Between 25 and 200~fF each
-doubling of $\CL$ multiplies 2LAL energy at 10~ns by 3.0--3.4 (log--log slope
-1.6--1.8), approaching the $\times4$ of a pure $\CL^2$ law. For ECRL the fixed
-residue grows from 2.5 to 153~fJ across the sweep, and at 100~ns energy is
-close to linear in $\CL$ (log--log slope 1.2--1.3): the threshold loss of
-\cref{eq:ecrl} dominates. ECRL and 2LAL fail logic at $\Tph=1$~ns from
-100~fF, and at 2~ns at 200~fF, where $R\CL$ approaches the ramp time.
+measured directly as the mean DC on-resistance of the TG ($-8\%$), and its
+intercept gives $C_p=7.7$~fF. Between 25 and 200~fF, each doubling of $\CL$
+multiplies 2LAL energy at 10~ns by 3.0 to 3.4 (log--log slope 1.6 to 1.8),
+approaching the factor of four of a pure $\CL^2$ law. For ECRL the fitted
+residue grows from 2.5 to 153~fJ across the sweep, and at 100~ns the energy
+is close to linear in $\CL$ (log--log slope 1.2 to 1.3), because the
+threshold loss of \cref{eq:ecrl} dominates. Both families fail logic at
+$\Tph=1$~ns from 100~fF and at 2~ns at 200~fF, where $R\CL$ approaches the
+ramp time.
 
 \subsection{Effect of Channel Length}
 \label{sec:length}
-$L$ is swept from 0.15 to 2.0~\textmu m at $W=1.0$~\textmu m, $\CL=25$~fF
-(\cref{tab:length,fig:length}). The grid includes SKY130's characterised
-lengths (0.15, 0.18, 0.25, 0.5, 1 and 2~\textmu m), where model bins meet.
+$L$ is swept from 0.15 to 2.0~\textmu m at $W=1.0$~\textmu m and $\CL=25$~fF
+(\cref{tab:length,fig:length}). The grid includes the lengths at which SKY130
+is characterised (0.15, 0.18, 0.25, 0.5, 1 and 2~\textmu m), where model bins
+meet.
 \begin{table}[!t]
 \caption{Energy (fJ) Versus Channel Length ($W=1$~\textmu m, $\CL=25$~fF)}
 \label{tab:length}
@@ -818,36 +827,42 @@ lengths (0.15, 0.18, 0.25, 0.5, 1 and 2~\textmu m), where model bins meet.
 \label{fig:length}
 \end{figure}
 Energy rises with $L$ in both families, and the shortest channel is the
-cheapest at every $\Tph$ except 100~ns, where 2LAL at 0.18~\textmu m is
-0.8\% below 0.15~\textmu m because the longer channel leaks less. 2LAL rises
-faster: at 10~ns it is 3.4$\times$ below ECRL at 0.15~\textmu m but costs
-more above $L\approx0.85$~\textmu m. Its $1/\Tph$ coefficient grows as
-$R(L)\,C_{\mathrm{eff}}(L)^2$, and both factors grow with $L$. With the
-transmission-gate resistance $R(L)$ measured at each length (4.9 to
-86~k$\Omega$, proportional to $L$ above 0.5~\textmu m), the effective node
-capacitance $C_{\mathrm{eff}}=\sqrt{a/4\VDD^2R}$ is
-$28.2+12.6\,L$~fF (\textmu m), linear within 5.3\%: the 25~fF load plus
-junctions, plus gate charge growing as $WL$. The slope lies between two
-oxide-based estimates ($C_{ox}=8.3$~fF/\textmu m$^2$ from the model's
-$t_{ox}=4.15$~nm): 16.6~fF/\textmu m for the two gates per node that are in
-inversion while the node swings, and about 10~fF/\textmu m if those gates
-are counted only above threshold. For ECRL the threshold residue grows from
-15.1 to 27.6~fJ between 0.15 and 1~\textmu m, following the pull-up pFET,
-whose $|V_{\mathrm{th}}|$ rises from 0.73 to 0.94~V. The nFET threshold falls
-over the same range (0.68 to 0.55~V), the reverse short-channel effect of
-SKY130's halo implants. Long channels fail logic at the fastest ramps
-(2LAL from 0.35~\textmu m at 1~ns; ECRL from 0.35~\textmu m at 1~ns).
+cheapest at every $\Tph$ except 100~ns, where 2LAL at 0.18~\textmu m is 0.8\%
+below 0.15~\textmu m because the longer channel leaks less. 2LAL rises faster:
+at 10~ns it is 3.4$\times$ below ECRL at 0.15~\textmu m but costs more above
+$L\approx0.85$~\textmu m. Its $1/\Tph$ coefficient grows as
+$R(L)\,C_{\mathrm{eff}}(L)^2$, and both factors grow with $L$. The TG
+resistance, measured at each length, rises from 4.9 to 86~k$\Omega$ and is
+roughly proportional to $L$ above 0.5~\textmu m (47, 44 and 43~k$\Omega$ per
+\textmu m at 0.5, 1 and 2~\textmu m). With it, the effective node
+capacitance $C_{\mathrm{eff}}=\sqrt{a/(4\VDD^2R)}$ is
+$28.2~\text{fF}+12.6~\text{fF/\textmu m}\times L$, linear within 5.3\%: the
+25~fF load plus junctions, plus gate charge that grows as $WL$. The slope lies
+between two estimates from the gate oxide ($C_{ox}=8.3$~fF/\textmu m$^2$ from
+the model's $t_{ox}=4.15$~nm): 16.6~fF/\textmu m for the two gates per node
+that are in inversion while the node swings, and about 10~fF/\textmu m if
+those gates are counted only above threshold.
 
-\subsection{Energy--Delay Analysis}
+For ECRL the fitted residue grows from 15.1 to 27.6~fJ between 0.15 and
+1~\textmu m, following the pull-up pFET, whose $|V_{\mathrm{th}}|$ rises from
+0.73 to 0.94~V. The nFET threshold falls over the same range, from 0.68 to
+0.55~V, the reverse short-channel effect of SKY130's halo implants. Long
+channels fail logic at the fastest ramps; in both families the first failure
+is at $L=0.35$~\textmu m and $\Tph=1$~ns.
+
+\subsection{Energy--Delay Product}
 \label{sec:edp}
-With $t_d=\Tph$ per stage, $\EDP=E\,\Tph$ (\cref{tab:tph}, last two
-columns). EDP rises with $\Tph$ in both families, so within this sweep EDP is
-minimised at the shortest ramp: 46.1~fJ$\cdot$ns for 2LAL and
-54.7~fJ$\cdot$ns for ECRL at 1~ns. The penalty for slowing down differs
-greatly. From 1 to 100~ns, ECRL's EDP grows 22.8$\times$ while its energy
-falls only 4.4$\times$; 2LAL's EDP grows 1.85$\times$ while its energy falls
-54$\times$. In other words, slowing 2LAL buys energy almost one-for-one in
-time, whereas slowing ECRL mostly costs time.
+With $t_d=\Tph$ per stage, $\EDP=E\,\Tph$ (\cref{tab:edp}). EDP rises with
+$\Tph$ in both families, so within this sweep it is smallest at the shortest
+ramp: 46.1~fJ$\cdot$ns for 2LAL and 54.7~fJ$\cdot$ns for ECRL at 1~ns. The
+cost of slowing down differs greatly. From 1 to 100~ns, ECRL's EDP grows
+22.8$\times$ while its energy falls only 4.4$\times$; 2LAL's EDP grows
+2.0$\times$ while its energy falls 49.5$\times$. Slowing 2LAL buys energy
+nearly in proportion to the time spent; slowing ECRL mostly costs time.
+Static CMOS, whose delay of 0.119~ns does not depend on a clock ramp, has an
+EDP of 5.20~fJ$\cdot$ns, about 9$\times$ below the best adiabatic value in
+the sweep. Adiabatic logic saves energy by spending time, and pays for it in
+EDP.
 \begin{table}[!t]
 \caption{Energy-Delay Product (fJ$\cdot$ns), $W=1$~\textmu m, $t_d=\Tph$}
 \label{tab:edp}
@@ -856,22 +871,16 @@ time, whereas slowing ECRL mostly costs time.
 \toprule
 \textbf{Condition} & \textbf{CMOS} & \textbf{ECRL} & \textbf{2LAL} \\
 \midrule
-$\Tph=1$~ns   & \tbd & 54.7   & 46.1 \\
-$\Tph=10$~ns  & \tbd & 216.6  & 63.1 \\
-$\Tph=100$~ns & \tbd & 1245.9 & 85.3 \\
+$\Tph=1$~ns   & 5.20 & 54.7   & 46.1 \\
+$\Tph=10$~ns  & 5.20 & 216.6  & 62.9 \\
+$\Tph=100$~ns & 5.20 & 1245.9 & 93.1 \\
 \bottomrule
 \end{tabular}
 \end{table}
-\begin{figure}[!t]
-\centering
-\simfig{\columnwidth}{figs/fig13_edp.pdf}
-\caption{Energy-delay product comparison.}
-\label{fig:edp}
-\end{figure}
 
-\subsection{Comprehensive Comparison}
+\subsection{Overall Comparison}
 \begin{table}[!t]
-\caption{Comprehensive Comparison ($W=1$~\textmu m, $\Tph=10$~ns)}
+\caption{Overall Comparison ($W=1$~\textmu m, $\Tph=10$~ns)}
 \label{tab:summary}
 \centering
 \setlength{\tabcolsep}{3pt}
@@ -879,172 +888,186 @@ $\Tph=100$~ns & \tbd & 1245.9 & 85.3 \\
 \toprule
 \textbf{Parameter} & \textbf{CMOS} & \textbf{ECRL} & \textbf{2LAL} \\
 \midrule
-Energy/op.\ (fJ)          & \tbd & 21.66 & 6.31 \\
-Avg.\ power (\si{\micro\watt}) & \tbd & 0.542 & 0.158 \\
-Latency/stage (ns)        & \tbd & 10 & 10 \\
-EDP (fJ$\cdot$ns)         & \tbd & 216.6 & 63.1 \\
+Energy/op.\ (fJ)          & 43.77 & 21.66 & 6.29 \\
+Avg.\ power (\si{\micro\watt}) & 1.094 & 0.541 & 0.157 \\
+Delay or latency (ns)     & 0.119 & 10 & 10 \\
+EDP (fJ$\cdot$ns)         & 5.20 & 216.6 & 62.9 \\
 Transistors               & 2 & 4 per gate & 8 per cell; 16 per inverter column \\
 Clock rails               & DC $\VDD$ & 1 per gate; 4 phases in a cascade & 4 \\
 Encoding                  & single-rail & dual-rail & dual-rail; quad-rail to invert \\
 Nodes swung per op.       & 1 & 1 & 2 \\
-Returned / delivered      & 0 & 62.9\% & 90.8\% \\
-Non-adiabatic residue     & -- & yes (\cref{eq:ecrl}) & none observed \\
+Returned / delivered      & 0 & 62.9\% & 95.1\% \\
+Fixed residue (fitted)    & -- & 15.1~fJ (\cref{eq:ecrl}) & 0.11~fJ \\
 \bottomrule
 \end{tabular}
 \end{table}
 \Cref{tab:summary} collects the nominal-point comparison. The lower energy of
-2LAL comes with 4$\times$ the transistors per inverter, four clock rails, and
-twice the swung capacitance per operation. Its standing capacitance, area and
-leakage are all larger.
+2LAL comes with four times the transistors per inverter, four clock rails and
+twice the swung capacitance per operation, so its area and standing
+capacitance are larger than those of ECRL.
 
-\subsection{Operating-Region Analysis}
+\subsection{Operating Regions}
 \label{sec:region}
-\tbd[: requires the $f\times\CL$ sweep and a simulated CMOS reference.] Along
-the frequency axis at $\CL=25$~fF, the ratio to the analytical CMOS reference
-is $\rho_{\mathrm{ECRL}}=0.31$ at 10~MHz and $1.35$ at 1000~MHz, and
-$\rho_{\mathrm{2LAL}}=0.021$ at 10~MHz and $1.14$ at 1000~MHz. For both
-families, $\rho<1$ holds up to at least 500~MHz and is lost by 1000~MHz.
-\begin{figure*}[!t]
+\begin{table}[!t]
+\caption{Energy Relative to Static CMOS, $\rho=E/E_{\mathrm{CMOS}}$}
+\label{tab:region}
 \centering
-\simfig{0.48\textwidth}{figs/fig14a_region_ecrl.pdf}\hfill
-\simfig{0.48\textwidth}{figs/fig14b_region_2lal.pdf}
-\caption{Energy ratio $\rho$ versus frequency (x) and load capacitance (y) for
-(left) ECRL and (right) 2LAL; the $\rho=1$ contour is marked.}
-\label{fig:region}
-\end{figure*}
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{@{}lcccccc@{}}
+\toprule
+& & \multicolumn{5}{c}{\textbf{$\Tph$ (ns)}} \\
+\cmidrule(l){3-7}
+\textbf{Logic} & \textbf{$\CL$ (fF)} & \textbf{1} & \textbf{2} & \textbf{5} & \textbf{10} & \textbf{100} \\
+\midrule
+\multirow{4}{*}{ECRL} & 10  & 0.79 & 0.59 & 0.44 & 0.36 & 0.22 \\
+                      & 25  & 1.25 & 0.91 & 0.62 & 0.49 & 0.28 \\
+                      & 50  & 1.66 & 1.27 & 0.84 & 0.64 & 0.34 \\
+                      & 100 & fails & 1.68 & 1.16 & 0.85 & 0.40 \\
+\midrule
+\multirow{4}{*}{2LAL} & 10  & 0.77 & 0.43 & 0.19 & 0.10 & 0.024 \\
+                      & 25  & 1.05 & 0.61 & 0.27 & 0.14 & 0.021 \\
+                      & 50  & 1.60 & 0.89 & 0.42 & 0.23 & 0.028 \\
+                      & 100 & fails & 1.46 & 0.68 & 0.38 & 0.045 \\
+\bottomrule
+\multicolumn{7}{@{}p{0.95\columnwidth}@{}}{\footnotesize $W=1$~\textmu m,
+$L=0.15$~\textmu m. $E_{\mathrm{CMOS}}$ is the simulated inverter of
+\cref{fig:cmos} at the same $\CL$ (19.2, 43.8, 84.4 and 165.5~fJ per
+transition). $\rho<1$: the adiabatic gate uses less energy than CMOS.}
+\end{tabular}
+\end{table}
+\Cref{tab:region} combines the load sweep with the CMOS reference at the
+same loads. Adiabatic logic saves energy when the ramp is slow compared with
+$R\CL$, so the region where $\rho<1$ shrinks as the load grows: CMOS energy
+grows as $\CL$, but the resistive adiabatic term grows as $\CL^2$. At 10~fF
+both families beat CMOS at every ramp time in the table, down to 1~ns; at
+100~fF both need $\Tph\ge5$~ns (2LAL) or $\Tph\ge10$~ns (ECRL). At
+the slowest ramp, 2LAL stays below 5\% of CMOS energy at every load, whereas
+ECRL stays between 22\% and 40\% because of its residue.
 
+% =====================================================================
 \section{Discussion}
 \label{sec:discussion}
-\emph{Why adiabatic energy depends on transition time.} The loss is $I^2R$
-over the ramp, and $I\propto1/\Tph$, so the loss scales as $R\CL/\Tph$
-(\cref{eq:adiabatic}). 2LAL shows this slope ($-0.89$ to $-0.99$). ECRL
-shows a much weaker one because a part of its loss does not scale with
-$\Tph$.
-
-\emph{Why frequency influences dissipation.} Frequency and ramp time are the
-same knob ($f_{\mathrm{clk}}=1/4\Tph$). Per operation, energy rises with $f$.
-Per second, power rises faster still, because the operation rate rises too.
+\emph{Why adiabatic energy depends on ramp time.} The loss is $I^2R$
+integrated over the ramp, with $I\approx\CL\VDD/\Tph$. Doubling $\Tph$ halves
+the current, quarters the power and doubles its duration, so the loss halves
+(\cref{eq:adiabatic}). 2LAL comes close to this slope ($-0.84$ to $-0.96$
+between 10 and 50~ns); ECRL shows a much weaker one ($-0.24$) because part of
+its loss does not scale with $\Tph$.
 
 \emph{Why load capacitance matters.} $\CL$ sets both the charge moved per
-transition and the $RC$ time constant, so the resistive term scales as
-$\CL^2$ at fixed $R$ and $T$. The load sweep confirms this for 2LAL, with
-an $R$ and a parasitic $C_p$ that match independent measurements, and shows
-the ECRL threshold residue growing close to linearly with $\CL$
-(\cref{sec:cl}).
+transition and the $R\CL$ time constant, so the resistive term scales as
+$\CL^2$ at fixed $R$ and $T$. The load sweep confirms this for 2LAL, with an
+$R$ and a parasitic $C_p$ that match independent measurements, and shows the
+ECRL residue growing close to linearly with $\CL$ (\cref{sec:cl}). As a
+result, the advantage over CMOS shrinks as the load grows
+(\cref{sec:region}).
 
-\emph{Why channel length matters.} A longer channel raises the charging-path
-resistance roughly in proportion to $L$ \cite{fischer2004} and adds gate
-capacitance in proportion to $WL$; the adiabatic term grows as the product
-$R\,C^2$, so energy per operation rises steeply with $L$ in 2LAL. Longer
-channels leak less, but in this range that saving is visible only at the
-slowest ramp (\cref{sec:length}).
+\emph{Why channel length matters.} A longer channel raises the
+charging-path resistance roughly in proportion to $L$ \cite{fischer2004} and
+adds gate capacitance in proportion to $WL$. The adiabatic term grows as the
+product $R\,C^2$, so energy rises steeply with $L$ in 2LAL. Longer channels
+leak less, but within this sweep the saving is visible only at the slowest
+ramp (\cref{sec:length}).
 
-\emph{Why width affects energy and delay.} Width trades lower $R$ against
-higher device capacitance and leakage. It helps where the loss is resistive:
-short ramps in both families, and 2LAL generally. It does little where the
-loss is a threshold residue (ECRL at long ramps). It hurts where the resistive
-term is already small (2LAL above 1.5~\textmu m at 100~ns). Stage latency is
-fixed by the clock, so width affects how closely the output tracks the rail,
-not the delay.
+\emph{Why width affects energy.} Width trades lower $R$ against more device
+capacitance and leakage. It helps where the loss is resistive: short ramps
+in both families, and 2LAL for ramps up to 20~ns. It does little where the
+loss is a threshold residue (ECRL at long ramps), and it hurts where the
+resistive term is already small: at 50 and 100~ns, 2LAL energy is lowest at
+1.5~\textmu m and rises towards 3~\textmu m.
 
-\emph{Practical differences between ECRL and 2LAL.} ECRL needs 4 FETs and one
-clock per gate but strands $\approx|V_{\mathrm{th},p}|$ on the released
-output. Its per-cycle energy also depends on data activity: 5.36~fJ with
-static data against 12.46~fJ with alternating data at 100~ns. 2LAL needs
-8~FETs per cell, 16 per inverter column and four rails. It has no residue, but
-its floating FALSE nodes make it sensitive to what surrounds the metered
-stages (\cref{sec:termination}). In this study, that sensitivity changed the
-headline comparison.
+\emph{Practical differences between ECRL and 2LAL.} ECRL needs four
+transistors and one clock per gate but leaves a residual voltage on the
+released output (0.42 to 0.53~V here). Its energy per cycle also depends on data activity:
+5.36~fJ with static data and 12.46~fJ with alternating data at 100~ns. 2LAL
+needs eight transistors per cell, 16 per inverter column and four rails. Its
+fitted residue is only 0.11~fJ, but its floating FALSE nodes make it sensitive to the stages
+around the metered ones (\cref{sec:termination}); in this study that
+sensitivity reversed the headline comparison until the chain was closed.
 
 \emph{Comparison with published results.} The ECRL trend reported in
 \cite{moon1996}, energy rising with frequency and not extrapolating to zero,
-is reproduced qualitatively. The numbers are not comparable because the
+is reproduced qualitatively; the numbers are not comparable because the
 process, supply and device sizes differ. For 2LAL, Frank \emph{et al.} report
-6.9~aJ per cycle per FET for a shift register at 1~MHz, $\CL=10$~fF,
-$W=480$~nm in Sandia's 180~nm process \cite{frank2020talk}. Simulated at the
-same point in SKY130 ($\Tph=250$~ns, $W=0.48$~\textmu m, $L=0.18$~\textmu m),
-the ring passes all 96 logic checks and dissipates 8.1~aJ per FET per cycle,
-1.17$\times$ the published value; a quad-rail column has 16 FETs and one
-sub-chain pulsing per cycle, i.e.\ 50\% activity per sub-chain. Functionally,
-the ring follows the 2LAL timing rule of one tick of delay per stage
-\cite{frank2017tutorial}: the waveform decoder finds every stage's output to
-be the inverse of its input one $\Tph$ later (154/154 stage-periods).
-\guide{No published ECRL or 2LAL simulation in SKY130 was found; the closest
-same-PDK reference is DeBenedictis's ngspice shift-register decks, which
-include a SKY130 option \cite{debenedictis4lc}. A one-parameter-at-a-time
-sweep of $W$, $\CL$ and frequency is reported in \cite{reddy2023} (full text
-not accessed).}
+6.9~aJ per cycle per transistor for a shift register at 1~MHz,
+$\CL=10$~fF and $W=480$~nm in Sandia's 180~nm process, and 37~aJ in their
+350~nm process \cite{frank2020talk}. Simulated at the same point in SKY130
+($\Tph=250$~ns, $W=0.48$~\textmu m, $L=0.18$~\textmu m), our ring passes all 96
+logic checks and dissipates 8.1~aJ per transistor per cycle, 1.17$\times$ the
+published value. A quad-rail column has 16 transistors and one pulsing
+sub-chain per cycle, which corresponds to 50\% activity per sub-chain, as in
+the published figure. \Cref{tab:prior} summarises these comparisons.
 
-\emph{Conditions that favour energy recovery.} Recovery is favoured by long
-ramps relative to $R\CL$, switches that never turn on across a voltage and
-never turn off while carrying current (2LAL returns 98.8\% at 100~ns), and,
-for ECRL, low data activity, because the residue is lost only when the data
-changes.
+\emph{Conditions that favour energy recovery.} Recovery is favoured by ramps
+that are long compared with $R\CL$, by switches that never turn on across a
+voltage and never turn off while carrying current (2LAL returns 99.3\% of the
+delivered energy at 100~ns), and, for ECRL, by low data activity, because the
+residue is lost only when the data changes.
 
-\subsection{Comparison With Previous Work}
 \begin{table*}[!t]
 \caption{Comparison With Previously Reported Results}
 \label{tab:prior}
 \centering
-\begin{tabular}{@{}L{0.075\textwidth}L{0.12\textwidth}L{0.09\textwidth}L{0.065\textwidth}L{0.11\textwidth}L{0.09\textwidth}L{0.285\textwidth}@{}}
+\begin{tabular}{@{}L{0.09\textwidth}L{0.12\textwidth}L{0.09\textwidth}L{0.055\textwidth}L{0.1\textwidth}L{0.11\textwidth}L{0.29\textwidth}@{}}
 \toprule
 \textbf{Ref.} & \textbf{Technology} & \textbf{Logic} & \textbf{$\VDD$}
-  & \textbf{Frequency} & \textbf{Energy} & \textbf{Key finding} \\
+  & \textbf{Frequency} & \textbf{Energy} & \textbf{Notes} \\
 \midrule
-\cite{moon1996} & 1.0~\textmu m CMOS\,$^{b}$ & ECRL & 5~V\,$^{b}$ & \tbd & \tbd & Energy rises with frequency \\
-\cite{frank2020talk} & Sandia MESA 180~nm (sim.) & 2LAL shift reg. & \tbd & 1~MHz & 6.9~aJ/FET/cycle & $\CL=10$~fF, $W=480$~nm, 50\% activity; 37~aJ in MESA 350~nm \\
-This work, same point & SKY130 (tt) & 2LAL ring & 1.8~V & 1~MHz & 8.1~aJ/FET/cycle & $\CL=10$~fF, $W=0.48$, $L=0.18$~\textmu m; 1.17$\times$ the published value, all 96 logic checks pass \\
-\cite{fischer2004} & 0.13~\textmu m CMOS (sim.) & PFAL & \tbd & 1~MHz--1~GHz & 0.60--0.88~fJ at 500~MHz & Sizing rule: widen only while device capacitance $<$ load \\
-This work & SKY130 (tt) & ECRL, 2LAL & 1.8~V & 10--1000~MHz ($f_{\mathrm{tr}}$) & 0.55--59.6~fJ & 2LAL lower at all swept $f$; ECRL flattens to a threshold residue \\
-\midrule
-\multicolumn{7}{@{}l@{}}{\footnotesize $^{b}$As read from \cite{moon1996} (also $V_t\approx0.2$~V, 5/10~\textmu m devices); verify against the paper.} \\
+\cite{moon1996} & \tbd & ECRL & \tbd & \tbd & \tbd & Energy rises with frequency \\
+\cite{fischer2004} & 0.13~\textmu m CMOS (sim.) & PFAL & not stated & 1~MHz--1~GHz & 0.60--0.88~fJ at 500~MHz & Fanout of 10; doubling the pFET width cuts energy 1.5$\times$; widen only while device capacitance stays below the load \\
+\cite{frank2020talk} & Sandia 180~nm (sim.) & 2LAL & not stated & 1~MHz & 6.9~aJ per transistor per cycle & Shift register, $\CL=10$~fF, $W=480$~nm, 50\% activity; 37~aJ in Sandia 350~nm \\
+This work & SKY130 \texttt{tt} & 2LAL & 1.8~V & 1~MHz & 8.1~aJ per transistor per cycle & Same operating point as \cite{frank2020talk}, $L=0.18$~\textmu m; 1.17$\times$ the published value \\
+This work & SKY130 \texttt{tt} & ECRL, 2LAL & 1.8~V & 2.5--250~MHz ($f_{\mathrm{clk}}$) & 0.62--59.6~fJ per operation & $\CL=25$~fF, $W$ 0.84--3~\textmu m; 2LAL lower at every point; ECRL levels off at a 15~fJ residue \\
 \bottomrule
 \end{tabular}
 \end{table*}
-\guide{Do not claim no prior study exists; state how this work extends or
-systematically evaluates established approaches.}
+\guide{Fill the \cite{moon1996} row (process, supply, frequency range,
+energy) from the paper itself. A one-parameter-at-a-time study of $W$, $\CL$
+and frequency for other adiabatic families is reported in \cite{reddy2023};
+we could not access its full text.}
 
 % =====================================================================
 \section{Limitations}
 \label{sec:limits}
-This is a pre-layout simulation study in one process corner (SKY130 tt,
-27~$^\circ$C). It covers inverters only, with no extracted parasitics and no
-fabricated or measured silicon. The power-clock generator is ideal, and its
-losses are excluded, as in most adiabatic results. No CMOS deck or supply
-sweep has been run yet. ECRL is a single gate
-driven by ideal slow-ramp inputs whose energy is not metered. The 2LAL cell
-is a reconstruction from secondary sources. The lowest 2LAL energies (below
-1~fJ) are sensitive to chain termination at the 10\% level.
+This is a pre-layout simulation study in one process corner (SKY130
+\texttt{tt}, 27~$^\circ$C). It covers inverters only, with no extracted
+parasitics and no fabricated or measured silicon. The power-clock generator
+is ideal and its losses are excluded, as in most adiabatic results. No
+supply-voltage sweep has been run, and the CMOS reference is a single
+inverter driven with fixed 100~ps input edges. The ECRL gate is driven by
+ideal slow-ramp inputs whose energy is not metered. The 2LAL cell follows
+DeBenedictis's PHAS2 cell \cite{debenedictis4lc} and Frank's descriptions
+\cite{frank2003mistakes,frank2020icrc}; it has not been compared with a
+fabricated 2LAL circuit.
 
 \section{Conclusion}
 \label{sec:conclusion}
-This work presented a comparative simulation study of ECRL and 2LAL
-inverters in SKY130 under one simulator, one load and one energy definition.
-The influence of transition time (equivalently frequency) and transistor
-width was investigated at $\VDD=1.8$~V and $\CL=25$~fF. 2LAL dissipated less
-than ECRL at every swept point, by 1.19$\times$ at 1~ns and 14.6$\times$ at
-100~ns ($W=1$~\textmu m), and it followed the adiabatic $1/T$ law. ECRL
-flattened towards a threshold-related residue and depended on data activity.
-The lowest observed energy was 0.55~fJ (2LAL, $W=1.5$~\textmu m,
-$\Tph=100$~ns), and the lowest ECRL energy was 11.55~fJ ($W=3$~\textmu m,
-$\Tph=100$~ns). The EDP analysis showed that slowing 2LAL buys energy almost
-one-for-one in time, whereas slowing ECRL mostly costs time. Energy rose
-with channel length in both families, steeply enough in 2LAL that it lost its
-advantage above $L\approx0.85$~\textmu m at 10~ns, and the load sweep separated
-the $\CL^2$ adiabatic term from ECRL's near-linear threshold residue. Overall, the
-study shows that adiabatic energy figures depend on the metering window and
-on the test-structure boundaries as much as on the circuit: two such defects
-each reversed a conclusion here.
-\tbd[: CMOS comparison sentence once simulated.]
+ECRL and 2LAL inverters were compared in SKY130 under one simulator, one
+supply, one load and one energy definition, and checked against a simulated
+static CMOS inverter. 2LAL dissipated less than ECRL at every swept point, by
+1.19$\times$ at a 1~ns ramp and 13.4$\times$ at 100~ns ($W=1$~\textmu m), and
+followed the adiabatic $1/T$ law with a fixed residue of only 0.11~fJ. ECRL
+levelled off at a residue of about 15~fJ that tracks the pull-up pFET
+threshold, and its energy depends on data activity. Both beat the 43.8~fJ
+CMOS reference for ramps of 2~ns and slower at $\CL=25$~fF, and the region
+in which they do shrinks as the load grows. The lowest energies were 0.62~fJ
+for 2LAL ($W=1.5$~\textmu m, $\Tph=100$~ns) and 11.55~fJ for ECRL
+($W=3$~\textmu m, $\Tph=100$~ns) over the width sweep. Energy rose with channel
+length in both families, steeply enough in 2LAL that it lost its advantage
+above $L\approx0.85$~\textmu m at 10~ns. Slowing 2LAL buys energy nearly in
+proportion to the time spent, whereas slowing ECRL mostly costs time. At a published
+2LAL operating point, the SKY130 ring came within 1.17$\times$ of the
+reported energy per transistor. Finally, adiabatic energy figures depend on
+the metering window and on the boundaries of the test structure as much as on
+the circuit: two such defects each reversed a conclusion in this study.
 
 \section*{Future Work}
-\guide{Keep only realistic directions.}
-NAND, NOR and multi-gate chains in both families. An ECRL chain in place of
-the ideal-input single gate. Separation of leakage from switching energy by
-measuring at zero activity. Supply-voltage sweeps.
-$\Tph>100$~ns to locate the 2LAL minimum. Layout with extracted parasitics,
-where 2LAL's larger standing capacitance will show. Costing the power-clock
-generator.
+NAND, NOR and multi-gate chains in both families; an ECRL chain in place of
+the single gate with ideal inputs; separation of leakage from switching
+energy by measuring at zero activity; supply-voltage sweeps; ramps longer
+than 100~ns to locate the 2LAL minimum; layout with extracted parasitics,
+where 2LAL's larger standing capacitance will show; and the cost of
+generating the power clocks.
 
 \section*{Acknowledgment}
 \tbd.
@@ -1052,11 +1075,5 @@ generator.
 % =====================================================================
 \bibliographystyle{IEEEtran}
 \bibliography{refs}
-
-% ---------------- supplementary (optional) ----------------
-% \clearpage
-% \appendix
-% \section{SPICE Decks and Reproduction}
-% \lstinputlisting{spice/ecrl_chain.cir}
 
 \end{document}
