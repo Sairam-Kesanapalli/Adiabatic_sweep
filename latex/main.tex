@@ -5,7 +5,8 @@
 %  Build:   latexmk -pdf main.tex        (or pdflatex -> bibtex -> pdflatex x2)
 %  Figures live in figs/, so this folder builds on its own (e.g. Overleaf:
 %  upload main.tex, refs.bib and figs/). After regenerating plots or
-%  waveforms in the repository, refresh them with ./update_figs.sh.
+%  waveforms in the repository, copy the changed PNGs from ../plots,
+%  ../verification/figures or ../slides/figs into figs/ (same names).
 %
 %  Draft aids (turn off for submission: set \draftfalse below):
 %    \tbd{...}    red   -> a value that has not been simulated or checked
@@ -162,8 +163,8 @@ $\mathit{out}$, conducts, and $\outb$ follows $\phi$ up and back down; the
 charge on $\outb$ returns to the clock through P1 on the falling ramp. Thus
 $\mathit{out}=\overline{\mathit{in}}$ and $\outb=\mathit{in}$, and exactly one
 output pulses in every cycle, whatever the data. The clock is a trapezoid with
-four equal intervals (wait, evaluate, hold, recover), and the input may change
-only during wait. A single gate uses one clock phase; a cascade places
+four equal intervals, named in \cite{moon1996} precharge-and-evaluate, hold,
+recover and wait, and the input may change only during wait. A single gate uses one clock phase; a cascade places
 successive stages on successive phases.
 
 ECRL needs only four transistors and one clock per gate. Its main loss is
@@ -246,8 +247,9 @@ output pair, and the reverse pair restores the previous stage.}
 \end{figure}
 
 \subsection{Research Gap}
-ECRL was introduced with an energy-versus-frequency evaluation
-\cite{moon1996}, and 2LAL has been developed as a fully adiabatic family by
+ECRL was introduced with an energy-versus-frequency evaluation of inverter
+chains and a 16-bit adder in a 1.0~\textmu m, 5~V process with a reduced
+threshold voltage of 0.2~V \cite{moon1996}, and 2LAL has been developed as a fully adiabatic family by
 Frank and co-workers \cite{frank2003mistakes,frank2020icrc}, who have
 reported simulated shift-register energies in Sandia's 180 and 350~nm
 processes \cite{frank2020talk}. These results use
@@ -989,10 +991,17 @@ fitted residue is only 0.11~fJ, but its floating FALSE nodes make it sensitive t
 around the metered ones (\cref{sec:termination}); in this study that
 sensitivity reversed the headline comparison until the chain was closed.
 
-\emph{Comparison with published results.} The ECRL trend reported in
-\cite{moon1996}, energy rising with frequency and not extrapolating to zero,
-is reproduced qualitatively; the numbers are not comparable because the
-process, supply and device sizes differ. For 2LAL, Frank \emph{et al.} report
+\emph{Comparison with published results.} Moon and Jeong report ECRL energy
+per cycle rising with transition frequency for inverter chains with 0.2 and
+1~pF loads, and, at 5~V and 0.2~pF, ECRL energy at 16\% of static CMOS at
+10~MHz and 5\% at 500~kHz \cite{moon1996}. Our ECRL shows the same rise with
+frequency, but it does not approach CMOS so closely: at the slowest ramp it
+stays at 28\% of CMOS ($\Tph=100$~ns, $\CL=25$~fF). The threshold residue of
+\cref{eq:ecrl}, relative to the CMOS energy $\tfrac12\CL\VDD^2$, is
+$(|V_{\mathrm{th},p}|/\VDD)^2$: about 0.2\% for their 0.2~V threshold at 5~V,
+but about 16\% for the 0.73~V SKY130 pFET at 1.8~V. The two results are
+therefore consistent; the absolute energies are not comparable because the
+process, supply, loads and device sizes differ. For 2LAL, Frank \emph{et al.} report
 6.9~aJ per cycle per transistor for a shift register at 1~MHz,
 $\CL=10$~fF and $W=480$~nm in Sandia's 180~nm process, and 37~aJ in their
 350~nm process \cite{frank2020talk}. Simulated at the same point in SKY130
@@ -1017,7 +1026,7 @@ residue is lost only when the data changes.
 \textbf{Ref.} & \textbf{Technology} & \textbf{Logic} & \textbf{$\VDD$}
   & \textbf{Frequency} & \textbf{Energy} & \textbf{Notes} \\
 \midrule
-\cite{moon1996} & \tbd & ECRL & \tbd & \tbd & \tbd & Energy rises with frequency \\
+\cite{moon1996} & 1.0~\textmu m CMOS (sim.), $V_{\mathrm{th}}=0.2$~V & ECRL & 5~V (3--5~V) & about 0.3--50~MHz ($f_{\mathrm{tr}}$) & 16\% of CMOS at 10~MHz; 5\% at 500~kHz & Inverter chain, 0.2 and 1~pF loads, NMOS 5~\textmu m, PMOS 10~\textmu m; residue $C|V_{tp}|^2/2$; 16-bit adder uses 4--6$\times$ less power than CMOS \\
 \cite{fischer2004} & 0.13~\textmu m CMOS (sim.) & PFAL & not stated & 1~MHz--1~GHz & 0.60--0.88~fJ at 500~MHz & Fanout of 10; doubling the pFET width cuts energy 1.5$\times$; widen only while device capacitance stays below the load \\
 \cite{frank2020talk} & Sandia 180~nm (sim.) & 2LAL & not stated & 1~MHz & 6.9~aJ per transistor per cycle & Shift register, $\CL=10$~fF, $W=480$~nm, 50\% activity; 37~aJ in Sandia 350~nm \\
 This work & SKY130 \texttt{tt} & 2LAL & 1.8~V & 1~MHz & 8.1~aJ per transistor per cycle & Same operating point as \cite{frank2020talk}, $L=0.18$~\textmu m; 1.17$\times$ the published value \\
@@ -1025,10 +1034,9 @@ This work & SKY130 \texttt{tt} & ECRL, 2LAL & 1.8~V & 2.5--250~MHz ($f_{\mathrm{
 \bottomrule
 \end{tabular}
 \end{table*}
-\guide{Fill the \cite{moon1996} row (process, supply, frequency range,
-energy) from the paper itself. A one-parameter-at-a-time study of $W$, $\CL$
-and frequency for other adiabatic families is reported in \cite{reddy2023};
-we could not access its full text.}
+\guide{A one-parameter-at-a-time study of $W$, $\CL$ and frequency for other
+adiabatic families is reported in \cite{reddy2023}; we could not access its
+full text.}
 
 % =====================================================================
 \section{Limitations}

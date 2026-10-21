@@ -32,7 +32,7 @@ CHECKS.md        how to re-derive every number and run every check
 | `verification/verify_all.sh` | waveform decode, mutation test, energy-meter calibration and model fit, length/load sweeps vs the model |
 | `slides/make_slides.py` | builds `slides/ECRL_2LAL_Progress_Review.pptx` |
 | `slides/make_verification_slides.py` | builds `slides/Verification_Explained.pptx`, an 8-slide plain-language summary of the checks (`--preview` also draws PNGs and flags text overflow) |
-| `latex/main.tex` | the paper; `latex/update_figs.sh` refreshes `latex/figs/` from `plots/` and `verification/figures/` |
+| `latex/main.tex` | the paper; its figures are copies in `latex/figs/` of PNGs from `plots/`, `verification/figures/` and `slides/figs/` |
 
 ## Quick start
 
@@ -85,8 +85,8 @@ On Overleaf, upload all three items: `main.tex`, `refs.bib` and the `figs/`
 folder (or upload a zip of `latex/` as a new project).  A figure that cannot
 be found is drawn as a box naming the missing file; a `[?]` in the text means
 a `\cite` key is missing from the `refs.bib` that was uploaded.  After
-regenerating plots or waveforms, run `latex/update_figs.sh` to refresh
-`latex/figs/`.
+regenerating plots or waveforms, copy the changed PNGs from `plots/`,
+`verification/figures/` or `slides/figs/` into `latex/figs/` (same file names).
 
 ## Known issue
 
