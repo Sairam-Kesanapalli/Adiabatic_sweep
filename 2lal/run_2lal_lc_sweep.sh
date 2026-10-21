@@ -6,6 +6,9 @@
 #                                   -> 2lal_length_sweep.csv
 #   ./run_2lal_lc_sweep.sh cap      CL x TPHASE at W = 1.0 um, L = 0.15 um
 #                                   -> 2lal_cap_sweep.csv
+#   ./run_2lal_lc_sweep.sh fast     TPHASE = 0.5 .. 1 ns at W = 1.0 um, L = 0.15 um,
+#                                   CL = 25 fF -> 2lal_fast_sweep.csv  (where the
+#                                   ECRL and 2LAL energy curves cross)
 #
 # Same grid, deck and per-point checks as run_2lal_sweep.sh, with one
 # difference: a point whose LOGIC fails (e.g. a long channel too slow
@@ -42,7 +45,8 @@ TPHASES=("1" "2" "5" "10" "20" "50" "100")
 case "$MODE" in
   length) VALUES=("0.15" "0.18" "0.25" "0.35" "0.5" "0.75" "1.0" "1.5" "2.0"); CL="25" ;;
   cap)    VALUES=("5" "10" "25" "50" "100" "200");                             L="0.15" ;;
-  *) echo "usage: $0 length|cap" >&2; exit 2 ;;
+  fast)   VALUES=("25"); L="0.15"; TPHASES=("0.5" "0.6" "0.65" "0.7" "0.8" "0.9" "1") ;;
+  *) echo "usage: $0 length|cap|fast" >&2; exit 2 ;;
 esac
 RESULTS="2lal_${MODE}_sweep.csv"
 RUNS="runs_2lal_${MODE}"
@@ -119,12 +123,17 @@ done
 rows=$(( $(wc -l < "$RESULTS") - 1 ))
 [ "$rows" -eq $(( ${#VALUES[@]} * ${#TPHASES[@]} )) ] || { echo "FAIL: $rows rows written" >&2; exit 1; }
 
-# Anchor: W = 1.0, L = 0.15, CL = 25 fF must reproduce the width sweep.
+# Anchor: W = 1.0, L = 0.15, CL = 25 fF must reproduce the width sweep at
+# every TPHASE the width sweep also ran (the fast mode shares only 1 ns).
+anchors=0
 for T in "${TPHASES[@]}"; do
   a=$(awk -F, -v t="$T" '$1=="1.0" && $2=="0.15" && $3=="25" && $4==t {print $9}' "$RESULTS")
   b=$(awk -F, -v t="$T" '$1=="1.0" && $2==t {print $7}' 2lal_inverter_sweep.csv)
+  [ -z "$b" ] && continue
+  anchors=$((anchors + 1))
   awk -v a="$a" -v b="$b" 'BEGIN{exit !(a!="" && b!="" && (a-b)^2 < (1e-4*b)^2)}' \
     || { echo "FAIL: anchor TPHASE=$T: $a fJ here, $b fJ in 2lal_inverter_sweep.csv" >&2; exit 1; }
 done
+[ "$anchors" -ge 1 ] || { echo "FAIL: no TPHASE shared with the width sweep to anchor on" >&2; exit 1; }
 nbad=$(awk -F, 'NR>1 && $10!="ok"' "$RESULTS" | wc -l)
 echo "-> $RESULTS  ($rows points, $nbad not ok, anchor matches the width sweep; decks and logs in $RUNS/)"

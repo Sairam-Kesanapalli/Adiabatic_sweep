@@ -224,6 +224,64 @@ def lc_plots():
               "ecrl_energy_vs_cap", "ecrl_vs_2lal_length_T10", "ecrl_vs_2lal_cap_T10"):
         print("wrote %s.png" % p)
 
+def crossover_plot():
+    """ECRL vs 2LAL at W = 1 um over the width sweep (TPHASE 1..100 ns) plus
+    the fast sweep (0.5..1 ns), with the crossing and the static CMOS level."""
+    pts = {}
+    for fam, files in (("ECRL", ["../ecrl/ecrl_slowramp_sweep.csv", "../ecrl/ecrl_fast_sweep.csv"]),
+                       ("2LAL", ["../2lal/2lal_inverter_sweep.csv", "../2lal/2lal_fast_sweep.csv"])):
+        d = {}
+        for path in files:
+            with open(path) as f:
+                for row in csv.DictReader(f):
+                    if row["W_um"] != "1.0" or row.get("status", "ok") != "ok":
+                        continue
+                    d[float(row["Tphase_ns"])] = float(row["E_C_fJ"])
+        pts[fam] = sorted(d.items())
+    # crossing: linear interpolation of the difference between adjacent points
+    e, l = dict(pts["ECRL"]), dict(pts["2LAL"])
+    ts = sorted(set(e) & set(l))
+    tx = ex = None
+    for t0, t1 in zip(ts, ts[1:]):
+        d0, d1 = l[t0] - e[t0], l[t1] - e[t1]
+        if d0 * d1 < 0:
+            fr = d0 / (d0 - d1)
+            tx = t0 + fr * (t1 - t0); ex = e[t0] + fr * (e[t1] - e[t0])
+            break
+    if tx is None:
+        sys.exit("crossover_plot: the ECRL and 2LAL curves do not cross in the data")
+    cmos = 43.77   # fJ per transition, verification/calibration_report.txt (CL = 25 fF)
+    out = "ecrl_vs_2lal_crossover.png"
+    dats = []
+    for i, fam in enumerate(("ECRL", "2LAL")):
+        dat = "%s.%d.dat" % (out, i)
+        with open(dat, "w") as f:
+            for t, en in pts[fam]:
+                f.write("%g %.6g\n" % (1000.0 / t, en))
+        dats.append(dat)
+    fx = 1000.0 / tx
+    gp = f"""
+set terminal pngcairo size 1100,760 font "Sans,11"
+set output '{out}'
+set title "ECRL vs 2LAL: where the energy curves cross\\nW = 1.0 um, L = 0.15 um, CL = 25 fF, alternating data" font "Sans,12"
+set xlabel "Transition frequency  f_tr = 1/TPHASE   (MHz)"
+set ylabel "Energy per operation  (fJ)"
+set logscale xy
+set grid
+set key top left
+set xtics ("10" 10, "20" 20, "50" 50, "100" 100, "200" 200, "500" 500, "1000" 1000, "2000" 2000)
+set xrange [8:2600]
+set yrange [0.5:150]
+set arrow from {fx:.1f},0.5 to {fx:.1f},150 nohead dt 2 lc rgb '#555555'
+set label "cross at TPHASE = {tx:.2f} ns\\n(f_tr = {fx/1000:.2f} GHz), {ex:.1f} fJ" at {fx*0.62:.1f},{ex*1.9:.1f} right
+set label "static CMOS, 43.8 fJ" at 12,{cmos*1.12:.1f}
+plot '{dats[0]}' using 1:2 with linespoints lw 3 pt 4 title 'ECRL inverter (slow-ramp input)', \\
+     '{dats[1]}' using 1:2 with linespoints lw 3 pt 5 title '2LAL quad-rail inverter (ring)', \\
+     {cmos} with lines dt 3 lw 2 lc rgb '#777777' notitle
+"""
+    subprocess.run(["gnuplot"], input=gp, text=True, check=True)
+    print("wrote %s (cross at TPHASE = %.3f ns, %.2f fJ)" % (out, tx, ex))
+
 if __name__ == "__main__":
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     jobs = [
@@ -268,3 +326,6 @@ if __name__ == "__main__":
 
     # ---- channel-length and load-capacitance sweeps (W = 1.0 um) ----
     lc_plots()
+
+    # ---- the ECRL / 2LAL crossover (width sweep + fast sweep, W = 1.0 um) ----
+    crossover_plot()

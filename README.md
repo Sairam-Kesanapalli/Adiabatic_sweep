@@ -27,7 +27,7 @@ CHECKS.md        how to re-derive every number and run every check
 | `ecrl/run_ecrl_slowramp_sweep.sh` | 6 widths x 7 TPHASEs -> `ecrl/ecrl_slowramp_sweep.csv` |
 | `2lal/make_2lal_ring.py` | generates `2lal/2LAL_inverter_ring.sp` (edit this, not the deck) |
 | `2lal/run_2lal_sweep.sh` | same grid -> `2lal/2lal_inverter_sweep.csv` |
-| `2lal/run_2lal_lc_sweep.sh`, `ecrl/run_ecrl_lc_sweep.sh` | `length` or `cap`: L or CL x 7 TPHASEs at W = 1 um -> `*_length_sweep.csv`, `*_cap_sweep.csv` |
+| `2lal/run_2lal_lc_sweep.sh`, `ecrl/run_ecrl_lc_sweep.sh` | `length`, `cap` or `fast`: L or CL x 7 TPHASEs at W = 1 um, or TPHASE 0.5-1 ns at the nominal point -> `*_length_sweep.csv`, `*_cap_sweep.csv`, `*_fast_sweep.csv` |
 | `plots/make_plots.py` | CSVs -> PNG plots and ngspice `.cir` plot decks |
 | `verification/verify_all.sh` | waveform decode, mutation test, energy-meter calibration and model fit, length/load sweeps vs the model |
 | `slides/make_slides.py` | builds `slides/ECRL_2LAL_Progress_Review.pptx` |
@@ -65,6 +65,12 @@ sweep.  `CHECKS.md` explains every check and how far each one can be trusted.
 From `ecrl/ecrl_slowramp_sweep.csv` and `2lal/2lal_inverter_sweep.csv`.
 ECRL carries one gate (4 FETs); 2LAL one quad-rail column (16 FETs) inside a
 metered 8-stage ring.  Plots: `plots/ecrl_vs_2lal_W1.0.png`.
+
+**Crossover:** below 1 ns the two curves cross.  At TPHASE = 0.66 ns
+(f_tr = 1.53 GHz) both dissipate 65.3 fJ, above the 43.8 fJ of static CMOS;
+2LAL is cheaper for slower ramps, ECRL for faster ones, and below 0.5 ns both
+fail their logic checks.  From `*_fast_sweep.csv`; plot
+`plots/ecrl_vs_2lal_crossover.png`.
 
 **Channel length** (W = 1 um, CL = 25 fF, TPHASE = 10 ns): energy rises with L
 in both families, ECRL 21.7 -> 67.2 fJ and 2LAL 6.3 -> 101.8 fJ from 0.15 to

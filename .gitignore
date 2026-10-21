@@ -23,3 +23,5 @@ fast.sp
 
 # PNG previews written by slides/make_verification_slides.py --preview
 slides/preview/
+2lal/runs_2lal_fast/
+ecrl/runs_ecrl_fast/

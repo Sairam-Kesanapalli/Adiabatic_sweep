@@ -182,8 +182,16 @@ Read a result:
     2lal/run_2lal_lc_sweep.sh cap      # -> 2lal/2lal_cap_sweep.csv
     ecrl/run_ecrl_lc_sweep.sh length   # -> ecrl/ecrl_length_sweep.csv
     ecrl/run_ecrl_lc_sweep.sh cap      # -> ecrl/ecrl_cap_sweep.csv
+    2lal/run_2lal_lc_sweep.sh fast     # -> 2lal/2lal_fast_sweep.csv
+    ecrl/run_ecrl_lc_sweep.sh fast     # -> ecrl/ecrl_fast_sweep.csv
 
-(The four are independent; all four in parallel take about 8 min.)
+(They are independent; the four length/load runs in parallel take about
+8 min, the two fast runs under a minute.)  The `fast` mode runs the nominal
+point (W = 1.0 um, L = 0.15 um, CL = 25 fF) at TPHASE = 0.5, 0.6, 0.65, 0.7,
+0.8, 0.9 and 1 ns, where the ECRL and 2LAL curves cross: at TPHASE = 0.66 ns,
+65.3 fJ (`plots/ecrl_vs_2lal_crossover.png`; `make_plots.py` finds the crossing
+by interpolating between the two points that bracket it).  Its 1 ns point is
+the anchor against the width sweep.
 
 | sweep | swept | held fixed | TPHASE |
 |---|---|---|---|

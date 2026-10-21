@@ -87,7 +87,7 @@ Frequency, Transition-Time and Circuit-Parameter Variations}
 \IEEEauthorblockN{Sairam Kesanapalli, Durgesh, Muthusankar Eswaran}
 \IEEEauthorblockA{Department of Electronics and Communication Engineering\\
 Indian Institute of Information Technology Dharwad, Karnataka, India\\
-\tbd[: email addresses]}
+24bec019@iiitdwd.ac.in, 24bec016@iiitdwd.ac.in, muthusankar.eswaran@iiitdwd.ac.in}
 }
 
 \maketitle
@@ -100,13 +100,15 @@ the stored charge to it. We compare an Efficient Charge Recovery Logic (ECRL)
 inverter and a Two-Level Adiabatic Logic (2LAL) inverter in the SkyWater
 SKY130 process with one simulator (ngspice), one supply (1.8~V), one load
 (25~fF per node), alternating data and one energy definition: the net energy
-drawn from the power clocks per clock period. The ramp time is swept from 1 to
-100~ns, and the device width, channel length and load capacitance are swept
+drawn from the power clocks per clock period. The ramp time is swept from 0.5
+to 100~ns, and the device width, channel length and load capacitance are swept
 one at a time. Over the width sweep, ECRL dissipates 11.55 to 59.59~fJ per
 operation and 2LAL 0.62 to 50.30~fJ. At $W=1$~\textmu m, 2LAL dissipates
 1.19$\times$ less than ECRL at a 1~ns ramp and 13.4$\times$ less at 100~ns; a
 simulated static CMOS inverter with the same load dissipates 43.8~fJ per
-transition. 2LAL energy falls nearly as $1/T$ (log--log slope $-0.84$ to
+transition. The two curves cross at a 0.66~ns ramp (65.3~fJ, above the CMOS
+energy): 2LAL is cheaper for slower ramps and ECRL for faster ones. 2LAL
+energy falls nearly as $1/T$ (log--log slope $-0.84$ to
 $-0.96$ between 10 and 50~ns), while ECRL levels off at a threshold-voltage
 residue of about 15~fJ. In the load sweep, 2LAL energy follows
 $R(\CL+C_p)^2$ with an $R$ within 8\% of the measured transmission-gate
@@ -544,7 +546,9 @@ can detect it.
 Four parameters are swept one at a time about the nominal point of
 \cref{tab:cond}: ramp time (and with it frequency), transistor width, channel
 length and load capacitance. The width, length and
-load sweeps are each crossed with all seven ramp times. Each point is a
+load sweeps are each crossed with all seven ramp times, and a further sweep
+at the nominal point covers ramp times from 0.5 to 1~ns to locate where the
+ECRL and 2LAL energies cross. Each point is a
 separate batch run, and results pass from \texttt{.meas} to CSV to gnuplot
 without manual editing. A point is accepted only if the substituted values
 appear in the deck, ngspice exits without errors or warnings, every
@@ -657,9 +661,11 @@ and ramp time are the same variable.
 \end{table}
 \begin{figure}[!t]
 \centering
-\simfig{\columnwidth}{ecrl_vs_2lal_W1.0.png}
+\simfig{\columnwidth}{ecrl_vs_2lal_crossover.png}
 \caption{Energy per operation versus transition frequency
-$f_{\mathrm{tr}}=1/\Tph$, $W=1$~\textmu m, $\CL=25$~fF.}
+$f_{\mathrm{tr}}=1/\Tph$, $W=1$~\textmu m, $\CL=25$~fF, including the ramp
+times below 1~ns. The curves cross at $\Tph=0.66$~ns (dashed line); the
+dotted line is the static CMOS energy.}
 \label{fig:freq}
 \end{figure}
 
@@ -674,11 +680,22 @@ between 10 and 50~ns is $-0.92$ for 2LAL at $W=1$~\textmu m and between
 $-0.84$ and $-0.96$ across the six widths. For ECRL it is $-0.24$ between 10
 and 100~ns and $-0.40$ between 1 and 10~ns.
 
-\emph{Relative advantage.} 2LAL is below ECRL at every point, and the gap
-grows as the clock slows, from 1.19$\times$ at 1~ns to 13.4$\times$ at
-100~ns. Against static CMOS, ECRL crosses 43.8~fJ between $\Tph=2$~ns
-(39.82~fJ) and 1~ns (54.69~fJ), and 2LAL between 2~ns (26.49~fJ) and 1~ns
-(46.10~fJ).
+\emph{Relative advantage and crossover.} From 1 to 100~ns 2LAL is below
+ECRL at every point, and the gap grows as the clock slows, from
+1.19$\times$ at 1~ns to 13.4$\times$ at 100~ns. Extending the ramp time below
+1~ns (0.5, 0.6, 0.65, 0.7, 0.8 and 0.9~ns, with every logic check passing)
+shows where the two curves cross (\cref{fig:freq}): at $\Tph=0.66$~ns
+($f_{\mathrm{tr}}=1.53$~GHz, $f_{\mathrm{clk}}=380$~MHz), both dissipate
+65.3~fJ. For faster ramps ECRL is the cheaper family (71.6 against 82.7~fJ at
+0.5~ns); below 0.5~ns both fail their logic checks. The crossover follows
+from the two loss mechanisms. 2LAL swings twice the capacitance per operation
+(two nodes, each up and down), so once the ramp is too short for adiabatic
+charging its loss is the larger: the fitted energy scale $K$ of the exact-ramp
+form is 224~fJ for 2LAL against 140~fJ for ECRL at $W=1$~\textmu m. ECRL's
+threshold residue does not shrink with $\Tph$ and dominates at long ramps.
+The crossing lies above the static CMOS energy: ECRL crosses 43.8~fJ between
+$\Tph=2$~ns (39.82~fJ) and 1~ns (54.69~fJ), and 2LAL between 2~ns
+(26.49~fJ) and 1~ns (46.10~fJ). Neither family beats CMOS at the crossover.
 
 \emph{Agreement with theory.} 2LAL follows the $1/T$ law of
 \cref{eq:adiabatic}: its $E\Tph$ product rises only from 59.6 to
@@ -1030,7 +1047,7 @@ residue is lost only when the data changes.
 \cite{fischer2004} & 0.13~\textmu m CMOS (sim.) & PFAL & not stated & 1~MHz--1~GHz & 0.60--0.88~fJ at 500~MHz & Fanout of 10; doubling the pFET width cuts energy 1.5$\times$; widen only while device capacitance stays below the load \\
 \cite{frank2020talk} & Sandia 180~nm (sim.) & 2LAL & not stated & 1~MHz & 6.9~aJ per transistor per cycle & Shift register, $\CL=10$~fF, $W=480$~nm, 50\% activity; 37~aJ in Sandia 350~nm \\
 This work & SKY130 \texttt{tt} & 2LAL & 1.8~V & 1~MHz & 8.1~aJ per transistor per cycle & Same operating point as \cite{frank2020talk}, $L=0.18$~\textmu m; 1.17$\times$ the published value \\
-This work & SKY130 \texttt{tt} & ECRL, 2LAL & 1.8~V & 2.5--250~MHz ($f_{\mathrm{clk}}$) & 0.62--59.6~fJ per operation & $\CL=25$~fF, $W$ 0.84--3~\textmu m; 2LAL lower at every point; ECRL levels off at a 15~fJ residue \\
+This work & SKY130 \texttt{tt} & ECRL, 2LAL & 1.8~V & 2.5--250~MHz ($f_{\mathrm{clk}}$) & 0.62--59.6~fJ per operation & $\CL=25$~fF, $W$ 0.84--3~\textmu m; 2LAL lower for ramps slower than 0.66~ns, ECRL faster; ECRL levels off at a 15~fJ residue \\
 \bottomrule
 \end{tabular}
 \end{table*}
@@ -1056,9 +1073,10 @@ fabricated 2LAL circuit.
 \label{sec:conclusion}
 ECRL and 2LAL inverters were compared in SKY130 under one simulator, one
 supply, one load and one energy definition, and checked against a simulated
-static CMOS inverter. 2LAL dissipated less than ECRL at every swept point, by
-1.19$\times$ at a 1~ns ramp and 13.4$\times$ at 100~ns ($W=1$~\textmu m), and
-followed the adiabatic $1/T$ law with a fixed residue of only 0.11~fJ. ECRL
+static CMOS inverter. 2LAL dissipated less than ECRL for every ramp from 1 to
+100~ns, by 1.19$\times$ at 1~ns and 13.4$\times$ at 100~ns ($W=1$~\textmu m);
+the two curves cross at a 0.66~ns ramp, above the CMOS energy, and ECRL is
+the cheaper family only for faster ramps. 2LAL followed the adiabatic $1/T$ law with a fixed residue of only 0.11~fJ. ECRL
 levelled off at a residue of about 15~fJ that tracks the pull-up pFET
 threshold, and its energy depends on data activity. Both beat the 43.8~fJ
 CMOS reference for ramps of 2~ns and slower at $\CL=25$~fF, and the region
