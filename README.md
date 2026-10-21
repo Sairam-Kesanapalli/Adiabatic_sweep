@@ -26,8 +26,9 @@ CHECKS.md        how to re-derive every number and run every check
 | `ecrl/run_ecrl_slowramp_sweep.sh` | 6 widths x 7 TPHASEs -> `ecrl/ecrl_slowramp_sweep.csv` |
 | `2lal/make_2lal_ring.py` | generates `2lal/2LAL_inverter_ring.sp` (edit this, not the deck) |
 | `2lal/run_2lal_sweep.sh` | same grid -> `2lal/2lal_inverter_sweep.csv` |
+| `2lal/run_2lal_lc_sweep.sh`, `ecrl/run_ecrl_lc_sweep.sh` | `length` or `cap`: L or CL x 7 TPHASEs at W = 1 um -> `*_length_sweep.csv`, `*_cap_sweep.csv` |
 | `plots/make_plots.py` | CSVs -> PNG plots and ngspice `.cir` plot decks |
-| `verification/verify_all.sh` | waveform decode, mutation test, energy-meter calibration and model fit |
+| `verification/verify_all.sh` | waveform decode, mutation test, energy-meter calibration and model fit, length/load sweeps vs the model |
 | `slides/make_slides.py` | builds `slides/ECRL_2LAL_Progress_Review.pptx` |
 
 ## Quick start
@@ -61,6 +62,14 @@ sweep.  `CHECKS.md` explains every check and how far each one can be trusted.
 From `ecrl/ecrl_slowramp_sweep.csv` and `2lal/2lal_inverter_sweep.csv`.
 ECRL carries one gate (4 FETs); 2LAL one quad-rail column (16 FETs) inside a
 metered 8-stage ring.  Plots: `plots/ecrl_vs_2lal_W1.0.png`.
+
+**Channel length** (W = 1 um, CL = 25 fF, TPHASE = 10 ns): energy rises with L
+in both families, ECRL 21.7 -> 67.2 fJ and 2LAL 6.3 -> 101.8 fJ from 0.15 to
+1.5-2 um; 2LAL grows faster and costs more than ECRL above L ~ 0.85 um.  The
+shortest channel is the cheapest at every TPHASE except 100 ns.
+**Load capacitance** (W = 1 um, L = 0.15 um): 2LAL energy follows
+R*(CL + 7.7 fF)^2 (adiabatic, ~CL^2), ECRL's slow-clock energy is close to
+linear in CL (threshold loss).  Details and checks: `CHECKS.md` sections 4b, 5c.
 
 ## Known issue
 

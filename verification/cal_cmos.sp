@@ -47,6 +47,10 @@ Re e 0 1e15
 .meas tran E_CYC PARAM='(e2-e1)/2'
 .meas tran E_INT INTEG par('V(vddm)*I(Vm)') FROM={2*TPER} TO={4*TPER}
 .meas tran E_CYC2 PARAM='E_INT/2'
+* propagation delay, 50 % to 50 %, period 3 (the output's 1st rise is power-up)
+.meas tran tphl TRIG V(in) VAL=0.9 RISE=3 TARG V(out) VAL=0.9 FALL=3
+.meas tran tplh TRIG V(in) VAL=0.9 FALL=3 TARG V(out) VAL=0.9 RISE=4
+.meas tran tpd PARAM='(tphl+tplh)/2'
 * functional: output high while input is low, and vice versa
 .meas tran vout_hi FIND V(out) AT={3.1*TPER}
 .meas tran vout_lo FIND V(out) AT={3.6*TPER}

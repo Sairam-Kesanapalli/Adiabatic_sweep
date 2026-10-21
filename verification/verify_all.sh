@@ -6,6 +6,7 @@
 #   3. mutation_test_2lal.sh prove the deck's 96 checks can fail -> mutation_report.txt
 #   4. run_calibration.sh    meter / convergence / DC runs      -> data/calibration/
 #   5. check_calibration.py  check 1 (meter) + check 2 (model)  -> calibration_report.txt
+#   6. check_lc_scaling.py   length / load sweeps vs the model  -> lc_scaling_report.txt
 # Stops at the first failure.  The sweeps have their own per-point
 # checks (../ecrl/run_ecrl_slowramp_sweep.sh, ../2lal/run_2lal_sweep.sh).
 # ============================================================
@@ -16,4 +17,5 @@ python3 check_waveforms.py
 ./mutation_test_2lal.sh
 ./run_calibration.sh
 python3 check_calibration.py
-echo "-> verification PASSED: see waveform_report.txt, mutation_report.txt, calibration_report.txt, figures/"
+python3 check_lc_scaling.py
+echo "-> verification PASSED: see waveform_report.txt, mutation_report.txt, calibration_report.txt, lc_scaling_report.txt, figures/"

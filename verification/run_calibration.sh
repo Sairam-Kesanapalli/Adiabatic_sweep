@@ -12,8 +12,12 @@
 #   2   ECRL split      ecrl_slowramp.sp with 0 V probes on every FET,
 #                       energy per device per clock phase, TPHASE =
 #                       1/10/100 ns
-#       cal_tg_ron.sp   TG on-resistance at the 6 sweep widths
+#       cal_tg_ron.sp   TG on-resistance at the 6 sweep widths and the
+#                       9 channel lengths of the length sweep
 #       cal_pfet_rise.sp  ECRL pull-up pFET DC table
+#       cal_vth.sp      nFET / pFET I-V at the 9 lengths, for Vth(L)
+#   lit 2LAL ring at Frank et al.'s published operating point (1 MHz,
+#       10 fF, W = 0.48 um, L = 0.18 um), for check_lc_scaling.py
 #
 # Decks and logs go to data/calibration/ (not in git).  Stops at the
 # first run that fails: ngspice exits non-zero, the log has an
@@ -107,11 +111,30 @@ EOF
   for p in "XMP1 OUTB OUT  ps1" "XMP2 OUT  OUTB ps2" "XMN1 OUTB INB sn1" "XMN2 OUT IN sn2"; do landed "$tag" "^$p"; done
 done
 
+echo "2: 2LAL at a published operating point (Frank et al., ICRC 2020)"
+# 1 MHz clock (TPHASE = 250 ns), CL = 10 fF, W = 0.48 um, L = 0.18 um.
+sed -e "s/^\.param WN     = [^;]*/.param WN     = 0.48         /" \
+    -e "s/^\.param WP     = [^;]*/.param WP     = 0.48         /" \
+    -e "s/^\.param L      = [^;]*/.param L      = 0.18        /" \
+    -e "s/^\.param CL     = [^;]*/.param CL     = 10f         /" \
+    -e "s/^\.param TPHASE = .*/.param TPHASE = 250n/" "$LAL" | run lit_frank2020
+for p in "WN     = 0.48 " "WP     = 0.48 " "L      = 0.18 " "CL     = 10f " "TPHASE = 250n"; do
+  landed lit_frank2020 "^\.param $p"
+done
+
 echo "2: DC tables"
 for W in 0.84 1.0 1.2 1.5 2.0 3.0; do
   sed "s/^\.param W = .*/.param W = ${W}/" cal_tg_ron.sp | run "tg_W$W"
   landed "tg_W$W" "^\.param W = ${W}$"
 done
+for L in 0.15 0.18 0.25 0.35 0.5 0.75 1.0 1.5 2.0; do       # length sweep, W = 1.0 um
+  sed "s/^\.param L = .*/.param L = ${L}/" cal_tg_ron.sp | run "tg_L$L"
+  landed "tg_L$L" "^\.param L = ${L}$"
+done
 run pfet_rise < cal_pfet_rise.sp
+for L in 0.15 0.18 0.25 0.35 0.5 0.75 1.0 1.5 2.0; do       # Vth vs channel length
+  sed "s/^\.param L = .*/.param L = ${L}/" cal_vth.sp | run "vth_L$L"
+  landed "vth_L$L" "^\.param L = ${L}$"
+done
 
 echo "-> $DATA/  (now run: python3 check_calibration.py)"
