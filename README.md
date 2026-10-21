@@ -16,7 +16,8 @@ ecrl/            ECRL deck in use, its sweep script and results CSV
   superseded/    the earlier open-chain 2LAL decks (energy bug, kept for reference)
 plots/           make_plots.py and the energy-vs-frequency plots it draws
 verification/    waveform checks, mutation test, energy-meter calibration, reports
-slides/          make_slides.py, the progress-review deck, and its figures
+slides/          the progress-review deck, the verification explainer, their generators
+latex/           the paper: main.tex, refs.bib and figs/ (self-contained, builds on Overleaf)
 CHECKS.md        how to re-derive every number and run every check
 ```
 
@@ -30,6 +31,8 @@ CHECKS.md        how to re-derive every number and run every check
 | `plots/make_plots.py` | CSVs -> PNG plots and ngspice `.cir` plot decks |
 | `verification/verify_all.sh` | waveform decode, mutation test, energy-meter calibration and model fit, length/load sweeps vs the model |
 | `slides/make_slides.py` | builds `slides/ECRL_2LAL_Progress_Review.pptx` |
+| `slides/make_verification_slides.py` | builds `slides/Verification_Explained.pptx`, an 8-slide plain-language summary of the checks (`--preview` also draws PNGs and flags text overflow) |
+| `latex/main.tex` | the paper; `latex/update_figs.sh` refreshes `latex/figs/` from `plots/` and `verification/figures/` |
 
 ## Quick start
 
@@ -70,6 +73,20 @@ shortest channel is the cheapest at every TPHASE except 100 ns.
 **Load capacitance** (W = 1 um, L = 0.15 um): 2LAL energy follows
 R*(CL + 7.7 fF)^2 (adiabatic, ~CL^2), ECRL's slow-clock energy is close to
 linear in CL (threshold loss).  Details and checks: `CHECKS.md` sections 4b, 5c.
+
+## Paper (`latex/`)
+
+`latex/` holds everything the paper needs: `main.tex`, `refs.bib` and the
+figures in `latex/figs/`.
+
+    cd latex && latexmk -pdf main.tex      # or pdflatex, bibtex, pdflatex x2
+
+On Overleaf, upload all three items: `main.tex`, `refs.bib` and the `figs/`
+folder (or upload a zip of `latex/` as a new project).  A figure that cannot
+be found is drawn as a box naming the missing file; a `[?]` in the text means
+a `\cite` key is missing from the `refs.bib` that was uploaded.  After
+regenerating plots or waveforms, run `latex/update_figs.sh` to refresh
+`latex/figs/`.
 
 ## Known issue
 

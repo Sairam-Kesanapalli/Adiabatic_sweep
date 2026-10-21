@@ -3,8 +3,9 @@
 %  Under Frequency, Transition-Time and Circuit-Parameter Variations
 %
 %  Build:   latexmk -pdf main.tex        (or pdflatex -> bibtex -> pdflatex x2)
-%  Figures are read straight from the repository (../plots,
-%  ../verification/figures, ../slides/figs); build from this directory.
+%  Figures live in figs/, so this folder builds on its own (e.g. Overleaf:
+%  upload main.tex, refs.bib and figs/). After regenerating plots or
+%  waveforms in the repository, refresh them with ./update_figs.sh.
 %
 %  Draft aids (turn off for submission: set \draftfalse below):
 %    \tbd{...}    red   -> a value that has not been simulated or checked
@@ -50,14 +51,17 @@
   \newcommand{\guide}[1]{}
 \fi
 
-% Include a figure if generated, else draw a placeholder box with the expected path.
+% Include a figure from figs/ (or, failing that, from this folder), else
+% draw a box naming the missing file.
 \newlength{\simfigw}
 \newcommand{\simfig}[2]{%
   \setlength{\simfigw}{#1}%
-  \IfFileExists{#2}%
-    {\includegraphics[width=\simfigw]{#2}}%
-    {\fbox{\parbox[c][0.45\simfigw][c]{0.94\simfigw}{\centering\footnotesize
-      \texttt{\detokenize{#2}}\\[2pt](not generated yet)}}}}
+  \IfFileExists{figs/#2}%
+    {\includegraphics[width=\simfigw]{figs/#2}}%
+    {\IfFileExists{#2}%
+      {\includegraphics[width=\simfigw]{#2}}%
+      {\fbox{\parbox[c][0.45\simfigw][c]{0.94\simfigw}{\centering\footnotesize
+        \texttt{\detokenize{#2}}\\[2pt]missing: upload it to figs/}}}}}
 
 % ---------------- notation ----------------
 \newcommand{\VDD}{V_{\mathrm{DD}}}
@@ -235,7 +239,7 @@ float when FALSE and depend on the neighbouring stages to stay correct
 
 \begin{figure}[!t]
 \centering
-\simfig{0.9\columnwidth}{../slides/figs/fig_2lal_cell.png}
+\simfig{0.9\columnwidth}{fig_2lal_cell.png}
 \caption{2LAL stage (four TGs, eight transistors): the forward pair drives the
 output pair, and the reverse pair restores the previous stage.}
 \label{fig:2lal}
@@ -502,8 +506,8 @@ known data into node~6; that version and the ring agree within 0.8\% at all
 \label{sec:func}
 \begin{figure}[!t]
 \centering
-\simfig{\columnwidth}{../verification/figures/ecrl_inverter_T10.png}\\[2pt]
-\simfig{\columnwidth}{../verification/figures/2lal_inverter_stage_T10.png}
+\simfig{\columnwidth}{ecrl_inverter_T10.png}\\[2pt]
+\simfig{\columnwidth}{2lal_inverter_stage_T10.png}
 \caption{Transient waveforms at $\Tph=10$~ns, $W=1$~\textmu m, $\CL=25$~fF:
 (top) ECRL, where $\mathit{out}$ pulses when $\mathit{in}=0$ and $\outb$ when
 $\mathit{in}=1$; (bottom) one 2LAL stage (node~3 to node~4), whose output is
@@ -651,7 +655,7 @@ and ramp time are the same variable.
 \end{table}
 \begin{figure}[!t]
 \centering
-\simfig{\columnwidth}{../plots/ecrl_vs_2lal_W1.0.png}
+\simfig{\columnwidth}{ecrl_vs_2lal_W1.0.png}
 \caption{Energy per operation versus transition frequency
 $f_{\mathrm{tr}}=1/\Tph$, $W=1$~\textmu m, $\CL=25$~fF.}
 \label{fig:freq}
@@ -718,8 +722,8 @@ $-0.26$ and $-0.87$. Locating $T^{*}$ needs $\Tph>100$~ns.
 \end{table}
 \begin{figure}[!t]
 \centering
-\simfig{\columnwidth}{../plots/2lal_energy_vs_ftr.png}\\[2pt]
-\simfig{\columnwidth}{../plots/ecrl_slowramp_energy_vs_ftr.png}
+\simfig{\columnwidth}{2lal_energy_vs_ftr.png}\\[2pt]
+\simfig{\columnwidth}{ecrl_slowramp_energy_vs_ftr.png}
 \caption{Energy versus transition frequency for six widths: (top) 2LAL,
 (bottom) ECRL; $L=0.15$~\textmu m, $\CL=25$~fF.}
 \label{fig:width}
@@ -770,8 +774,8 @@ $\CL$ is swept from 5 to 200~fF at $W=1.0$~\textmu m, $L=0.15$~\textmu m
 \end{table}
 \begin{figure}[!t]
 \centering
-\simfig{\columnwidth}{../plots/2lal_energy_vs_cap.png}\\[2pt]
-\simfig{\columnwidth}{../plots/ecrl_energy_vs_cap.png}
+\simfig{\columnwidth}{2lal_energy_vs_cap.png}\\[2pt]
+\simfig{\columnwidth}{ecrl_energy_vs_cap.png}
 \caption{Energy versus load capacitance, one curve per $\Tph$: (top) 2LAL,
 (bottom) ECRL. Dashed lines are $E\propto\CL^2$ and $E\propto\CL$ guides.
 Points whose logic fails are omitted.}
@@ -820,8 +824,8 @@ meet.
 \end{table}
 \begin{figure}[!t]
 \centering
-\simfig{\columnwidth}{../plots/2lal_energy_vs_length.png}\\[2pt]
-\simfig{\columnwidth}{../plots/ecrl_vs_2lal_length_T10.png}
+\simfig{\columnwidth}{2lal_energy_vs_length.png}\\[2pt]
+\simfig{\columnwidth}{ecrl_vs_2lal_length_T10.png}
 \caption{(top) 2LAL energy versus channel length, one curve per $\Tph$;
 (bottom) ECRL and 2LAL at $\Tph=10$~ns.}
 \label{fig:length}
