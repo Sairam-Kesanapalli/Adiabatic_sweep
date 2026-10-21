@@ -20,3 +20,6 @@ try.sp
 static.sp
 full.sp
 fast.sp
+
+# PNG previews written by slides/make_verification_slides.py --preview
+slides/preview/
